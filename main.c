@@ -25,6 +25,10 @@ typedef struct
 
 Papan papan;
 
+void bagianCaraMain()
+{
+    printf("Test");
+}
 
 int main(int argc, char *argv[])
 {
