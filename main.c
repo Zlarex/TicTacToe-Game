@@ -5,6 +5,7 @@
 #include <time.h>
 #include <conio.h>
 #include <ctype.h>
+#include <math.h>
 
 #define KEY_ENTER 13
 #define KEY_ESCAPE 27
@@ -83,30 +84,6 @@ void pilihan(char* input)
     fflush(stdin);
     scanf(" %c", &temp);
     *input = toupper(temp);
-}
-
-void pilihanStr(char *input, void (*pilih_enter)(void), void (*pilih_esc)(void))
-{
-    char temp[50];
-    memset(temp, 0, sizeof(temp));
-    fgets(temp, 50, stdin);
-    while (true)
-    {
-        if (kbhit)
-        {
-            fflush(stdin);
-            char input = getch();
-            if ((int)input == KEY_ENTER) return (*pilih_enter)();
-            else if ((int)input == KEY_ESCAPE) return (*pilih_esc)();
-            else if ((int)input > 65 && ((int)input < 122))
-            {
-                
-            }
-        }
-    }
-    
-    temp[strlen(temp)-1] = '\000';
-    memcpy(input, temp, 50);
 }
 
 void pilihanYaTidak(void (*pilih_ya)(void), void (*pilih_tidak)(void))
@@ -225,6 +202,96 @@ void aturPermainanLama()
     return aturPermainanLama();
 }
 
+int panjangAngka(int angka)
+{
+    int len = 0;
+    int i = 0;
+    while (angka != 0)
+    {
+        angka /= 10;
+        len++;
+    }
+    return len;
+}
+
+char getIsiPapan(int pos)
+{
+    pos--;
+    return papan.isi[pos/papan.ukuran][pos%papan.ukuran];
+}
+
+void setIsiPapan(int pos, char nilai)
+{
+    pos--;
+    papan.isi[pos/papan.ukuran][pos%papan.ukuran] = nilai;
+}
+
+void tampilPapan(int ukuran, bool tampilPosisi)
+{
+    int isi = 1;
+    int maxIsi = ukuran * ukuran;
+    int maxVertikal = ukuran * 3; // --- dan | | = 5 char untuk 1 kotak
+    int isiLen = panjangAngka(maxIsi);
+
+    int i, j;
+    int posIsi = 2;
+    for (i = 0; i < maxVertikal + 1; i++)
+    {
+        bool bisaDiisi = false;
+        char cTulisAwal = '|';
+
+        if (i == posIsi)
+        {
+            bisaDiisi = true;
+            posIsi += 3;
+        }
+        if (i % 3 == 0)
+        {
+            if (i == 0) cTulisAwal = ' ';
+            else cTulisAwal = '|';
+            // if (i == 0) cTulisAwal = 'x';
+            // else if (i == maxVertikal - 1) cTulisAwal = 'x';
+            // else cTulisAwal = 'x';
+        }
+        for (j = 0; j < ukuran; j++)
+        {
+            int maxLenIsi = isiLen + 3; // 2 = space kanan kiri
+            if (j == 0) maxLenIsi++;
+            char cTulis = ' ';
+            char cIsi = '_';
+            if (j == ukuran - 1) cTulis = cTulisAwal;
+            if (i % 3 != 0)
+            {
+                cTulis = '|';
+                cIsi = ' ';
+            }
+            else if (i % 3 == 0 && i != 0) cTulis = '|';
+            char* cGaris = malloc(maxLenIsi + 1);
+            memset(cGaris, '\000', maxLenIsi + 1);
+            memset(cGaris, cIsi, maxLenIsi - 1);
+            memcpy(cGaris + maxLenIsi - 1, &cTulis, 1);
+            if (j == 0) memcpy(cGaris, &cTulisAwal, 1);
+            if (bisaDiisi)
+            {
+                char* isiChar = malloc(isiLen + 1);
+                if (tampilPosisi)
+                {
+                    int pos = 1;
+                    if (j == 0) pos++;
+                    itoa(isi, isiChar, 10);
+                    memcpy(cGaris + pos, isiChar, strlen(isiChar));
+                }
+                
+                free(isiChar);
+                isi++;
+            }
+            printf("%s", cGaris);
+            free(cGaris);
+        }
+        printf("\n");
+    }
+}
+
 void mulaiPermainan()
 {
     printf("%s", papan.nama);
@@ -273,6 +340,6 @@ void bagianKeluar()
 
 int main(int argc, char* argv[])
 {
-    bagianPermainan();
+    
 	return 0;
 }
