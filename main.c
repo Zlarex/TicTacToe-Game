@@ -226,13 +226,12 @@ void setIsiPapan(int pos, char nilai)
     papan.isi[pos/papan.ukuran][pos%papan.ukuran] = nilai;
 }
 
-void tampilPapan(int ukuran, bool tampilPosisi)
+void tampilPapan(bool tampilPosisi)
 {
     int isi = 1;
-    int maxIsi = ukuran * ukuran;
-    int maxVertikal = ukuran * 3; // --- dan | | = 5 char untuk 1 kotak
+    int maxIsi = papan.ukuran * papan.ukuran;
+    int maxVertikal = papan.ukuran * 3; // --- dan | | = 5 char untuk 1 kotak
     int isiLen = panjangAngka(maxIsi);
-
     int i, j;
     int posIsi = 2;
     for (i = 0; i < maxVertikal + 1; i++)
@@ -253,13 +252,13 @@ void tampilPapan(int ukuran, bool tampilPosisi)
             // else if (i == maxVertikal - 1) cTulisAwal = 'x';
             // else cTulisAwal = 'x';
         }
-        for (j = 0; j < ukuran; j++)
+        for (j = 0; j < papan.ukuran; j++)
         {
             int maxLenIsi = isiLen + 3; // 2 = space kanan kiri
             if (j == 0) maxLenIsi++;
             char cTulis = ' ';
             char cIsi = '_';
-            if (j == ukuran - 1) cTulis = cTulisAwal;
+            if (j == papan.ukuran - 1) cTulis = cTulisAwal;
             if (i % 3 != 0)
             {
                 cTulis = '|';
@@ -273,19 +272,35 @@ void tampilPapan(int ukuran, bool tampilPosisi)
             if (j == 0) memcpy(cGaris, &cTulisAwal, 1);
             if (bisaDiisi)
             {
-                char* isiChar = malloc(isiLen + 1);
-                if (tampilPosisi)
-                {
-                    int pos = 1;
-                    if (j == 0) pos++;
-                    itoa(isi, isiChar, 10);
-                    memcpy(cGaris + pos, isiChar, strlen(isiChar));
-                }
-                
+                int allocSize = isiLen + 1;
+                char* isiChar = malloc(allocSize);
+                char isiPapan = getIsiPapan(isi);
+                int pos = 1;
+                if (j == 0) pos++;
+                memset(isiChar, '\000', allocSize);
+                if (isiPapan == 'X' || isiPapan == 'O') memcpy(isiChar, &isiPapan, 1);
+                else if (tampilPosisi) itoa(isi, isiChar, 10);
+                memcpy(cGaris + pos, isiChar, strlen(isiChar));
                 free(isiChar);
                 isi++;
             }
-            printf("%s", cGaris);
+            int k = 0;
+            for (k = 0; k < strlen(cGaris); k++)
+            {
+                bool color = false;
+                if (cGaris[k] == 'X')
+                {
+                    printf("\033[1;31m");
+                    color = true;
+                }
+                else if (cGaris[k] == 'O')
+                {
+                    printf("\033[1;32m");
+                    color = true;
+                }
+                printf("%c", cGaris[k]);
+                if (color) printf("\033[0m");
+            }
             free(cGaris);
         }
         printf("\n");
@@ -294,7 +309,35 @@ void tampilPapan(int ukuran, bool tampilPosisi)
 
 void mulaiPermainan()
 {
-    printf("%s", papan.nama);
+    int lenInfoPemain = strlen(papan.pemain[0].nama) + strlen(papan.pemain[1].nama) + 4 + 1;
+    int lenSize = panjangAngka(papan.ukuran) + 1;
+    int lenJudul = strlen("Permainan ") + (panjangAngka(papan.ukuran) * 2) + 3 + lenInfoPemain + 5;
+    char *judul = malloc(lenJudul);
+    char *size = malloc(lenSize);
+    char *infoPemain = malloc(lenInfoPemain);
+    memset(judul, '\000', lenJudul);
+    memset(size, '\000', lenSize);
+    memset(infoPemain, '\000', lenInfoPemain);
+    itoa(papan.ukuran, size, 10);
+    memcpy(infoPemain, papan.pemain[0].nama, strlen(papan.pemain[0].nama));
+    memcpy(infoPemain + strlen(infoPemain), " vs ", 4);
+    memcpy(infoPemain + strlen(infoPemain), papan.pemain[1].nama, strlen(papan.pemain[1].nama));
+    memcpy(judul, "Permainan ", strlen("Permainan "));
+    memcpy(judul + strlen(judul), size, 1);
+    memcpy(judul + strlen(judul), " x ", 3);
+    memcpy(judul + strlen(judul), size, 1);
+    memcpy(judul + strlen(judul), " (", 2);
+    memcpy(judul + strlen(judul), infoPemain, strlen(infoPemain) + 1);
+    memcpy(judul + strlen(judul), ")", 1);
+    free(infoPemain);
+    free(size);
+    // while (periksaPapan() == true)
+    // while (true)
+    {
+        menuPanel(judul, "");
+        tampilPapan(true);
+    }
+    free(judul);
 }
 
 void bagianPermainan()
