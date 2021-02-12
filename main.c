@@ -1,3 +1,14 @@
+/*********************************************************************
+ * Tic-Tac-Toe Game  
+ *********************************************************************
+ * NAMA FILE    : main.c
+ * AUTHOR       : Ihsan Fauzan Hanif & Syelvie Ira Ratna Mulia
+ * COMPILER     : MinGW GCC
+ * DESKRIPSI    : Aplikasi konsol permainan Tic-Tac-Toe
+ * 2021
+ ********************************************************************/
+
+/* HEADER */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -7,10 +18,13 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <windows.h>
 
+/* MAKRO */
 #define KEY_ENTER 13
-#define KEY_ESCAPE 27
+#define KEY_ESCAPE 2
 
+/* STRUKTUR */
 typedef struct
 {
 	char nama[50];
@@ -33,9 +47,15 @@ typedef struct
 	Pemain pemain[2];
 } Papan;
 
+/* VARIABEL GLOBAL */
+HANDLE hConsole;
+WORD consoleAttr;
+pthread_t timerId, permainanId;
 Papan papan;
 bool validInput = true;
+bool pause = false;
 
+/* DEKLARASI MODUL */
 void menuPanel(char*, char*);
 void menuOpsi(char*);
 void menuPilihan(char*);
@@ -51,7 +71,9 @@ void bagianKeluar();
 void menuUtama();
 void mulaiPermainan();
 
+/* IMPLEMENTASI MODUL */
 void biarkan() {}
+
 void keluarProgram() { exit(0); }
 
 void menuPanel(char* judul, char* pesan)
@@ -59,6 +81,9 @@ void menuPanel(char* judul, char* pesan)
     system("cls");
     printf("%s\n============================================\n%s", judul, pesan);
 }
+
+int MAX(int a, int b) { return (a > b) ? a : b; }
+int MIN(int a, int b) { return (a < b) ? a : b; }
 
 void menuOpsi(char* opsi)
 {
@@ -92,6 +117,7 @@ void pilihanYaTidak(void (*pilih_ya)(void), void (*pilih_tidak)(void))
     while (true)
     {
         fflush(stdin);
+
         char input = getch();
         if ((int)input == KEY_ENTER) return (*pilih_ya)();
         else if ((int) input == KEY_ESCAPE) return (*pilih_tidak)();
@@ -104,6 +130,7 @@ void aturPermainan()
     menuPanel("Mulai Permainan", "Tekan Enter untuk memulai permainan atau 'Esc' untuk kembali\n");
     pilihanYaTidak(biarkan, bagianPermainan);
 }
+
 void dataReverse(char* data, int length)
 {
     int i = 0;
@@ -119,18 +146,27 @@ void dataReverse(char* data, int length)
     }
 }
 
-int simpanPermainan(int posisi)
+void upperCase(char *data)
 {
+    int i = 0;
+    for (i = 0; i < strlen(data); i++)
+    {
+        *(data + i) = toupper(*(data + i));
+    }
+}
+
+int simpanPermainan(int pos)
+{
+    int papanSize = sizeof(papan);
     char fileData[255] = {'\000'};
     char fileLokasi[100] = "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save";
+    char *dataPapan = malloc(papanSize);
     memcpy(fileData, fileLokasi, strlen(fileLokasi));
-    itoa(posisi, fileData + strlen(fileData), 10);
+    itoa(pos, fileData + strlen(fileData), 10);
     memcpy(fileData + strlen(fileData), ".dat", 4);
     
     FILE* pFile = fopen(fileData, "wb");
     if (pFile == NULL) return 1;
-    int papanSize = sizeof(papan);
-    char dataPapan[696] = {'\000'};
     memset(dataPapan, 0, papanSize);
     memcpy(dataPapan, &papan, papanSize - 1);
     dataReverse(dataPapan, papanSize);
@@ -140,18 +176,18 @@ int simpanPermainan(int posisi)
     return 0;
 }
 
-int imporPermainan(int posisi, Papan* pPapan)
+int imporPermainan(int pos, Papan* pPapan)
 {
+    int pPapanSize = sizeof(*pPapan);
     char fileData[255] = {'\000'};
     char fileLokasi[100] = "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save";
+    char* dataPapan = malloc(pPapanSize);
     memcpy(fileData, fileLokasi, strlen(fileLokasi));
-    itoa(posisi, fileData + strlen(fileData), 10);
+    itoa(pos, fileData + strlen(fileData), 10);
     memcpy(fileData + strlen(fileData), ".dat", 4);
     
     FILE* pFile = fopen(fileData, "rb");
     if (pFile == NULL) return 1;
-    int pPapanSize = sizeof(*pPapan);
-    char* dataPapan = malloc(pPapanSize);
     memset(dataPapan, 0, pPapanSize);
     memset(pPapan, 0, pPapanSize);
     if (fread(dataPapan, pPapanSize, 1, pFile) != 1) return 1;
@@ -165,7 +201,6 @@ int imporPermainan(int posisi, Papan* pPapan)
 void aturPermainanLama()
 {
     char input = '\000';
-    int inputInteger = 0;
     menuPanel("Mulai Permainan", "Pilihlah permainan yang ingin anda lanjutkan");
     pesanInvalid("Pilihan data permainan tidak valid");
 
@@ -181,6 +216,7 @@ void aturPermainanLama()
     menuPilihan("Masukkan pilihan anda");
     pilihan(&input);
     if (input == 'Q') return bagianPermainan();
+    
     int pilihanInt = atoi(&input);
     if (pilihanInt > 0 && pilihanInt <= 5)
     {
@@ -236,9 +272,6 @@ void tampilPapan(bool tampilPosisi)
         {
             if (i == 0) cTulisAwal = ' ';
             else cTulisAwal = '|';
-            // if (i == 0) cTulisAwal = 'x';
-            // else if (i == maxVertikal - 1) cTulisAwal = 'x';
-            // else cTulisAwal = 'x';
         }
         for (j = 0; j < papan.ukuran; j++)
         {
@@ -275,19 +308,19 @@ void tampilPapan(bool tampilPosisi)
             int k = 0;
             for (k = 0; k < strlen(cGaris); k++)
             {
-                bool color = false;
                 if (cGaris[k] == 'X')
                 {
-                    printf("\033[1;31m");
-                    color = true;
+                    SetConsoleTextAttribute(hConsole, 12);
+                    printf("%c", cGaris[k]);
+                    SetConsoleTextAttribute(hConsole, consoleAttr);
                 }
                 else if (cGaris[k] == 'O')
                 {
-                    printf("\033[1;32m");
-                    color = true;
+                    SetConsoleTextAttribute(hConsole, 10);
+                    printf("%c", cGaris[k]);
+                    SetConsoleTextAttribute(hConsole, consoleAttr);
                 }
-                printf("%c", cGaris[k]);
-                if (color) printf("\033[0m");
+                else printf("%c", cGaris[k]);
             }
             free(cGaris);
         }
@@ -295,178 +328,210 @@ void tampilPapan(bool tampilPosisi)
     }
 }
 
-void mulaiPermainans()
+int cekMinimal(int ukuran)
 {
-    // while (periksaPapan() == true)
-    papan.giliran = 0;
-    int waktu = 10;
-    int curPos = 0;
-
-    char temp[5] = {'\000'};
-    memset(temp, '\000', 5);
-    do
+    switch (ukuran)
     {
-        system("cls");
-        fflush(stdout);
-        printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
-        printf("\n============================================\n");
-        tampilPapan(true);
-        printf("Skor: %d", papan.pemain[0].skor);
-        printf(" Waktu: %d detik", waktu);
-        menuOpsi("Q: Ke menu utama");
-        printf("\n[Giliran %s]", papan.pemain[papan.giliran].nama);
-
-        if (kbhit())
-        {
-            char temp2 = getch();
-            printf("%d", (int)temp2);
-            if ((int)temp2 == KEY_ENTER)
-            {
-
-            }
-            
-            if (!papan.pemain[papan.giliran].isKomputer)
-            {
-                if ((int)temp2 == 113)
-                {
-                    system("cls");
-                    printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
-                    printf("\n============================================\n");
-                    printf("Apakah anda ingin menghentikan permainan?\n");
-                    menuOpsi("Tekan Enter untuk setuju atau 'Esc' untuk melanjutkan");
-                    pilihanYaTidak(bagianPermainan, biarkan);
-                }
-                else if ((int)temp2 >= 48 && (int)temp2 <= 57)
-                {
-                    if (curPos < 4)
-                    {
-                        temp[curPos] = temp2;
-                        curPos++;
-                    }
-                }
-            }
-        }
-        if (!papan.pemain[papan.giliran].isKomputer)
-        {
-            menuPilihan("Masukkan posisi petak");
-            printf("%s", temp);
-        }
-        sleep(1);
-        waktu--;
+    case 3: return 3;
+    case 5: return 4;
+    case 7: return 5;
     }
-    while (waktu > -1);
+    return 0;
 }
 
-void endPermainanThread(int status)
+bool cekDiagonal(char simbol)
 {
-    if (status == 0)
+    int cek = cekMinimal(papan.ukuran);
+    int counter, i, j, temp;
+
+    // Diagonal [/] dari (0, 0) sampai (papan.ukuran-1, 0)
+    for (i = 0; i < papan.ukuran; i++)
     {
-        system("cls");
-        printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
-        printf("\n============================================\n");
-        tampilPapan(false);
-        printf("\n[Giliran %s]", papan.pemain[papan.giliran].nama);
-        menuOpsi("Waktu habis");
-        sleep(1);
+        counter = 0;
+        temp = i;
+        j = 0;
+        while(temp >= 0)
+        {
+            if (papan.isi[temp][j] == simbol) counter++;
+            else counter = 0;
+            temp--;
+            j++;
+        }
+        if (counter >= cek) return true;
     }
+
+    // Diagonal [/] dari (0, papan.ukuran-1) sampai (papan.ukuran-1, papan.ukuran-1)
+    for (i = 0; i < papan.ukuran; i++)
+    {
+        counter = 0;
+        temp = i;
+        j = papan.ukuran - 1;
+        while (temp <= papan.ukuran - 1)
+        {
+            if (papan.isi[temp][j] == simbol) counter++;
+            else counter = 0;
+            temp++;
+            j--;
+        }
+        if (counter >= cek) return true;
+    }
+
+    // Diagonal [\] dari (0, papapn.ukuran-1) sampai (papan.ukuran-1, papan.ukuran-1)
+    for (i = 0; i < papan.ukuran; i++)
+    {
+        counter = 0;
+        temp = i;
+        j = papan.ukuran - 1;
+        while (temp >= 0)
+        {
+            if (papan.isi[temp][j] == simbol) counter++;
+            else counter = 0;
+            temp--;
+            j--;
+        }
+        if (counter >= cek) return true;
+    }
+
+    // Diagonal [\] dari (0,0) sampai (papan.ukuran-1, 0)
+    for (i = 0; i < papan.ukuran; i++)
+    {
+        counter = 0;
+        temp = i;
+        j = 0;
+        while (temp < papan.ukuran)
+        {
+            if (papan.isi[temp][j] == simbol) counter++;
+            else counter = 0;
+            temp++;
+            j++;
+        }
+        if (counter >= cek) return true;
+    }
+
+    return false;
 }
 
-pthread_t timerId, permainanId;
-bool pause = false;
-
-void* timerThread(void* permainanThread)
+void* timerThread()
 {
-    while (papan.waktu > 0)
+    while (papan.waktu > -1)
     {
         if (pause) continue;
         sleep(1);
         papan.waktu--;
     }
-    pthread_cancel(permainanId);
-    endPermainanThread(papan.waktu);
     pthread_exit(NULL);
 }
 
 void* permainanThread()
 {
-    char temp[5] = {'\000'};
-    int pos = 0;
-    while (papan.waktu != 0)
+    char input[5] = {'\000'};
+    do
     {
-        char input = '\000';
+        if (papan.waktu == -2) break;
         system("cls");
-        fflush(stdout);
         printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
-        printf("\n============================================\n");
-        if (pause == false)
+        printf("\n============================================");
+        printf("\n");
+        if (pause)
         {
-            tampilPapan(true);
-            if (!papan.pemain[1].isKomputer) printf("Skor: %d", papan.pemain[0].skor);
-            menuOpsi("Q: Ke menu utama");
-            printf("\n[Giliran %s]", papan.pemain[papan.giliran].nama);
-            menuPilihan("Masukkan nilai petak");
-            printf("%s", temp);
+            if (papan.waktu >= 0) printf("\nWaktu tersisa: %d detik", papan.waktu);
+            else printf("\nWaktu habis. Posisi akan diisi secara acak");
+            printf("\nTekan Enter untuk keluar atau 'Esc' untuk melanjutkan permainan\n");
+            while (true)
+            {
+                fflush(stdin);
+                char pilihan = getch();
+                if ((int)pilihan == KEY_ENTER)
+                {
+                    pthread_cancel(timerId);
+                    papan.waktu = -2;
+                    pause = false;
+                    break;
+                }
+                if ((int)pilihan == KEY_ESCAPE)
+                {
+                    pause = false;
+                    break;
+                }
+            }
+            continue;
         }
         else
         {
-            printf("\nWaktu tersisa: %d detik\nTekan Enter untuk keluar atau 'Esc' untuk melanjutkan permainan", papan.waktu);
-            int exit = 0;
-            do exit = getch();
-            while (exit != KEY_ESCAPE && exit != KEY_ENTER);
-            if (exit == KEY_ESCAPE)
+            tampilPapan(true);
+            if (!papan.pemain[1].isKomputer) printf("Skor: %d", papan.pemain[papan.giliran].skor);
+            menuOpsi("Q: Ke menu utama");
+            printf("\n[Giliran %s]", papan.pemain[papan.giliran].nama);
+            pesanInvalid("Posisi petak tidak valid");
+            if (papan.waktu >= 0) printf("\nMasukkan nilai petak dalam waktu %d detik: ", papan.waktu);
+            else
             {
+                printf("\nWaktu habis");
+                printf("\nMasukkan nilai apapun untuk melanjutkan: ");
+            }
+            fgets(input, 4, stdin);
+            int newLine = strlen(input) - 1;
+            if (input[newLine] == '\n') input[newLine] = '\000';
+            upperCase(input);
+            
+            int posPapan = atoi(input);
+            if (strcmp(input, "Q") == 0)
+            {
+                pause = true;
+            }
+            else if (posPapan > 0 && posPapan <= papan.ukuran * papan.ukuran)
+            {
+                if (papan.waktu > -1)
+                {
+                    if (getIsiPapan(posPapan) != 'X' && getIsiPapan(posPapan) != 'O') setIsiPapan(posPapan, papan.pemain[papan.giliran].simbol);
+                    else
+                    {
+                        validInput = false;
+                        continue;
+                    }
+                }
+                else
+                {
+                    int posAcak = 0;
+                }
+                pthread_cancel(timerId);
+                papan.waktu = -3;
                 pause = false;
+                break;
+            }
+            else
+            {
+                validInput = false;
                 continue;
             }
-            else if (exit == KEY_ENTER)
-            {
-                pthread_cancel(timerId);
-                papan.waktu = -2;
-                pause = false;
-                pthread_exit(NULL);
-            }
+            
         }
-        if (kbhit)
-        {
-            char temp2 = getch();
-            if ((int)temp2 == 113 && papan.waktu > 0) pause = true;
-            if (!papan.pemain[papan.giliran].isKomputer)
-            {
-                if ((int)temp2 >= 48 && (int)temp2 <= 57)
-                {
-                    if (pos > 3) continue;
-                    temp[pos] = temp2;
-                    if (pos < 3) pos++;
-                }
-                else if ((int)temp2 == 8)
-                {
-                    if (pos < 0) continue;
-                    temp[pos] = '\000';
-                    if (pos > 0) pos--;
-                }
-            }
-        }
-    }
+    } while (true);
     pthread_exit(NULL);
 }
 
 void mulaiPermainan()
 {
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    memset(papan.isi, '\000', sizeof(papan.isi));
+    papan.pemain[0].simbol = 'X';
+    papan.pemain[1].simbol = 'O';
+    papan.isBermain = true;
     papan.giliran = 1;
+    pause = false;
     do
     {
         papan.giliran = (papan.giliran == 1)? 0 : 1;
         papan.waktu = 10;
-        pthread_create(&timerId, NULL, timerThread, NULL);
         pthread_create(&permainanId, NULL, permainanThread, NULL);
-        pthread_join(timerId, NULL);
+        pthread_create(&timerId, NULL, timerThread, NULL);
         pthread_join(permainanId, NULL);
+        pthread_join(timerId, NULL);
         if (papan.waktu == -2)
         {
             papan.waktu = 0;
             return bagianPermainan();
         }
+        else if (papan.waktu == -3) continue;
     }
     while (true);
 }
@@ -512,12 +577,32 @@ void bagianKeluar()
     pilihanYaTidak(keluarProgram, biarkan); // biarkan ---> menu utama
 }
 
+void initColor()
+{
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+
+    GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+    consoleAttr = consoleInfo.wAttributes;
+}
+
+/* MODUL UTAMA */
 int main(int argc, char* argv[])
 {
+    initColor();
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     memset(&papan, '\000', sizeof(papan));
     memcpy(papan.pemain[0].nama, "Zan", 4);
     memcpy(papan.pemain[1].nama, "Z4x", 4);
-    papan.ukuran = 3;
-    mulaiPermainan();
+    papan.ukuran = 7;
+    // mulaiPermainan();
+    setIsiPapan(16, 'O');
+    setIsiPapan(24, 'O');
+    setIsiPapan(32, 'O');
+    setIsiPapan(40, 'O');
+    setIsiPapan(48, 'O');
+    tampilPapan(true);
+    char* res = cekDiagonal('O') ? "ok" : "no";
+    printf("%s", res);
 	return 0;
 }
