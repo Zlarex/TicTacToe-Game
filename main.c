@@ -281,7 +281,7 @@ void setIsi(int pos, char nilai)
     papan.isi[pos/papan.ukuran][pos%papan.ukuran] = nilai;
 }
 
-int getIsiTotal()
+int getTotalKosong()
 {
     int counter = 0;
     int i;
@@ -478,7 +478,8 @@ bool cekPapan(char simbol)
     if (cekDiagonal(simbol)) return false;
     else if (cekHorizontal(simbol)) return false;
     else if (cekVertikal(simbol)) return false;
-    else if (getIsiTotal() >= papan.ukuran * papan.ukuran) 
+    
+    if (getTotalKosong() == 0) 
     {
         papan.giliran = 2;
         return false;
@@ -517,7 +518,7 @@ typedef struct
     int y;
 } AI;
 
-bool isMasihKosong()
+bool isBisaDiisi()
 {
     int i, j;
     for (i = 0; i < papan.ukuran; i++)
@@ -560,7 +561,7 @@ int minimax(bool isMax)
     int giliranLawan = (papan.giliran == 1)? 0 : 1;
     int skor = eval();
     if (skor == 10 || skor == -10) return skor;
-    if (!isMasihKosong()) return 0;
+    if (!isBisaDiisi()) return 0;
 
     if (isMax)
     {
