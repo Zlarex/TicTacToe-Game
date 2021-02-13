@@ -24,6 +24,8 @@
 #define KEY_ENTER 13
 #define KEY_ESCAPE 27
 #define GAME_TIMER 10
+#define SIMBOL_P1 X
+#define SIMBOL_P2 O
 #define LOKASI_SIMPAN_PERMAINAN "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save"
 
 /* STRUKTUR */
@@ -53,9 +55,8 @@ typedef struct
 typedef enum
 {
     KALAH = -1,
-    NORMAL = 0,
+    SERI = 0,
     MENANG = 1,
-    SERI = 2,
 } Kondisi;
 
 typedef enum
@@ -74,6 +75,7 @@ bool validInput = true;
 bool jeda = false;
 
 /* DEKLARASI MODUL */
+bool cekPapan(char);
 void menuPanel(char*, char*);
 void menuOpsi(char*);
 void menuPilihan(char*);
@@ -253,6 +255,20 @@ int panjangAngka(int angka)
     return len;
 }
 
+int parsePosisi(int x, int y)
+{
+    int hasil = 0;
+    for (int i = 0; i < papan.ukuran; i++)
+    {
+        for (int j = 0; j < papan.ukuran; j++)
+        {
+            if (i == x && j == y) return hasil + 1;
+            hasil++;
+        }
+    }
+    return 0;
+}
+
 char getIsi(int pos)
 {
     pos--;
@@ -271,7 +287,7 @@ int getIsiTotal()
     int i;
     for (i = 1; i < papan.ukuran * papan.ukuran + 1; i++)
     {
-        if (getIsi(i) == 'X' || getIsi(i) == 'O') counter++;
+        if (getIsi(i) == '\000') counter++;
     }
     return counter;
 }
@@ -325,7 +341,7 @@ void tampilPapan(bool tampilPosisi)
                 int pos = 1;
                 if (j == 0) pos++;
                 memset(isiChar, '\000', allocSize);
-                if (isiPapan == 'X' || isiPapan == 'O') memcpy(isiChar, &isiPapan, 1);
+                if (isiPapan != '\000') memcpy(isiChar, &isiPapan, 1);
                 else if (tampilPosisi) itoa(isi, isiChar, 10);
                 memcpy(cGaris + pos, isiChar, strlen(isiChar));
                 free(isiChar);
@@ -437,6 +453,39 @@ bool cekDiagonal(char simbol)
     return false;
 }
 
+bool cekHorizontal(char simbol)
+{
+    int i;
+    for (i = 0; i < 3; i++)
+    {
+        if (papan.isi[i][0] == simbol && papan.isi[i][1] == simbol && papan.isi[i][2] == simbol) return true;
+    }
+    return false;
+}
+
+bool cekVertikal(char simbol)
+{
+    int i;
+    for (i = 0; i < 3; i++)
+    {
+        if (papan.isi[0][i] == simbol && papan.isi[1][i] == simbol && papan.isi[2][i] == simbol) return true;
+    }
+    return false;
+}
+
+bool cekPapan(char simbol)
+{
+    if (cekDiagonal(simbol)) return false;
+    else if (cekHorizontal(simbol)) return false;
+    else if (cekVertikal(simbol)) return false;
+    else if (getIsiTotal() >= papan.ukuran * papan.ukuran) 
+    {
+        papan.giliran = 2;
+        return false;
+    }
+    else return true;
+}
+
 void jedaPermainan()
 {
     printf("\nApakah anda ingin keluar dari permainan?");
@@ -462,6 +511,123 @@ void jedaPermainan()
     }
 }
 
+typedef struct
+{
+    int x;
+    int y;
+} AI;
+
+bool isMasihKosong()
+{
+    int i, j;
+    for (i = 0; i < papan.ukuran; i++)
+    {
+        for (j = 0; j < papan.ukuran; j++)
+        {
+            if (papan.isi[i][j] == '\000') return true;
+        }
+    }
+    return false;
+}
+
+int eval()
+{
+    char simbolPemain = papan.pemain[papan.giliran].simbol;
+    int giliran = papan.giliran;
+
+    char cek = 'X';
+    bool status = cekPapan(cek);
+    if (status)
+    {
+        cek = 'O';
+        status = cekPapan(cek);
+    }
+    if (!status)
+    {
+        if (papan.giliran == 2)
+        {
+            papan.giliran = giliran;
+            return 0;
+        }
+        if (cek == simbolPemain) return 10;
+        else return -10;
+    }
+    return 0;
+}
+
+int minimax(bool isMax)
+{
+    int giliranLawan = (papan.giliran == 1)? 0 : 1;
+    int skor = eval();
+    if (skor == 10 || skor == -10) return skor;
+    if (!isMasihKosong()) return 0;
+
+    if (isMax)
+    {
+        int skorX = -1000;
+        int i, j;
+        for (i = 0; i < 3; i++)
+        {
+            for (j = 0; j < 3; j++)
+            {
+                if (papan.isi[i][j]=='\000')
+                {
+                    papan.isi[i][j] = papan.pemain[papan.giliran].simbol;
+                    skorX = max(skorX, minimax(!isMax));
+                    papan.isi[i][j] = '\000';
+                }
+            }
+        }
+        return skorX;
+    }
+    else
+    {
+        int skorX = 1000;
+        int i, j;
+        for (i = 0; i < 3; i++)
+        {
+            for (j = 0; j < 3; j++)
+            {
+                if (papan.isi[i][j]=='\000')
+                {
+                    papan.isi[i][j] = papan.pemain[giliranLawan].simbol;
+                    skorX = min(skorX, minimax(!isMax));
+                    papan.isi[i][j] = '\000';
+                }
+            }
+        }
+        return skorX;
+    }
+}
+
+int isiKritis()
+{
+    int skorX = -1000;
+    int posX = -1;
+    int posY = -1;
+
+    int i, j;
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            if (papan.isi[i][j] == '\000')
+            {
+                papan.isi[i][j] = papan.pemain[papan.giliran].simbol;
+                int skor = minimax(false);
+                papan.isi[i][j] = '\000';
+                if (skor > skorX)
+                {
+                    posX = i;
+                    posY = j;
+                    skorX = skor;
+                }
+            }
+        }
+    }
+    return parsePosisi(posX, posY);
+}
+
 int getInputKomputer(int kesulitan, int ukuran)
 {
     int input = 0;
@@ -472,12 +638,29 @@ int getInputKomputer(int kesulitan, int ukuran)
         break;
     case 2:
         // sedang
+        input = isiKritis();
         break;
     case 3:
         // sulit
         break;
     }
     return input;
+}
+
+void menuGameOver(int status)
+{
+    switch (status)
+    {
+    case 0:
+        // pemain 1 menang
+        break;
+    case 1:
+        // pemain 2 menang
+        break;
+    default:
+        // seri
+        break;
+    }
 }
 
 void* timerThread()
@@ -518,6 +701,10 @@ void* permainanThread()
                 posPapan = getInputKomputer(papan.kesulitan, papan.ukuran);
                 papan.waktu = SELESAI;
                 sleep(1);
+                setIsi(posPapan, papan.pemain[papan.giliran].simbol);
+                pthread_cancel(timerId);
+                papan.waktu = SELESAI;
+                break;
             }
             else
             {
@@ -537,7 +724,7 @@ void* permainanThread()
                 }
                 else if (
                     (posPapan > 0 && posPapan <= papan.ukuran * papan.ukuran) &&
-                    ((getIsi(posPapan) != 'X' && getIsi(posPapan) != 'O') || papan.waktu == TERLAMBAT)
+                    ((getIsi(posPapan) == '\000') || papan.waktu == TERLAMBAT)
                 )
                 {
                     pthread_cancel(timerId);
@@ -550,33 +737,6 @@ void* permainanThread()
         }
     } while (true);
     return NULL;
-}
-
-bool cekPapan(char simbol)
-{
-    if (cekDiagonal(simbol)) return false;
-    else if (getIsiTotal() >= papan.ukuran * papan.ukuran) 
-    {
-        papan.giliran = 2;
-        return false;
-    }
-    else return true;
-}
-
-void menuGameOver(int status)
-{
-    switch (status)
-    {
-    case 0:
-        // pemain 1 menang
-        break;
-    case 1:
-        // pemain 2 menang
-        break;
-    default:
-        // seri
-        break;
-    }
 }
 
 void mulaiPermainan()
@@ -679,13 +839,13 @@ int main(int argc, char* argv[])
     memset(&papan, '\000', sizeof(papan));
     memcpy(papan.pemain[0].nama, "Anda", 4);
     memcpy(papan.pemain[1].nama, "Komputer", 8);
+    papan.pemain[0].isKomputer = false;
     papan.pemain[1].isKomputer = true;
+    papan.pemain[0].simbol = 'X';
+    papan.pemain[1].simbol = 'O';
     papan.ukuran = 3;
+    papan.kesulitan = 2;
     mulaiPermainan();
-    // setIsi(16, 'O');
-    // setIsi(24, 'O');
-    // setIsi(32, 'O');
-    // setIsi(40, 'O');
     // setIsi(48, 'O');
     // tampilPapan(true);
     // char* res = cekDiagonal('O') ? "ok" : "no";
