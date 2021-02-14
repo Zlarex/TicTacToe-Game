@@ -144,7 +144,10 @@ void pilihanYaTidak(void (*pilih_ya)(void), void (*pilih_tidak)(void))
 void aturPermainan()
 {
     char input = '\000';
-    menuPanel("Mulai Permainan", "Tekan Enter untuk memulai permainan atau 'Esc' untuk kembali\n");
+    menuPanel("Mulai Permainan", "");
+    printf("\nPengaturan permainan.");
+    printf("\nPemain 1\t\t: %s", papan.pemain[0].nama);
+    printf("\nPemain 2\t\t: %s", papan.pemain[1].nama);
     pilihanYaTidak(biarkan, bagianPermainan);
 }
 
@@ -629,20 +632,36 @@ int isiKritis()
     return parsePosisi(posX, posY);
 }
 
-int getInputKomputer(int kesulitan, int ukuran)
+int isiAcak()
+{
+    srand(time(NULL));
+    int max = papan.ukuran * papan.ukuran;
+    int min = 1;
+    int pos = 0;
+    do
+    {
+        pos = (rand() % (max - min)) + min;
+    } while (getIsi(pos) != '\000');
+    return pos;
+}
+
+int getInputKomputer()
 {
     int input = 0;
-    switch (kesulitan)
+    switch (papan.kesulitan)
     {
     case 1:
         // mudah
+        input = isiAcak();
         break;
     case 2:
         // sedang
-        input = isiKritis();
+        if (getTotalKosong() % papan.ukuran == 0) input = isiKritis();
+        else input = isiAcak();
         break;
     case 3:
         // sulit
+        input = isiKritis();
         break;
     }
     return input;
@@ -699,7 +718,7 @@ void* permainanThread()
             if (papan.pemain[papan.giliran].isKomputer)
             {
                 printf("\nMenunggu giliran %s ...", papan.pemain[papan.giliran].nama);
-                posPapan = getInputKomputer(papan.kesulitan, papan.ukuran);
+                posPapan = getInputKomputer();
                 papan.waktu = SELESAI;
                 sleep(1);
                 setIsi(posPapan, papan.pemain[papan.giliran].simbol);
@@ -764,7 +783,7 @@ void mulaiPermainan()
         switch (papan.waktu)
         {
         case TERLAMBAT:
-            printf("terlambat");
+            pos = isiAcak();
             break;
         case KELUAR:
             printf("keluar");
@@ -845,7 +864,7 @@ int main(int argc, char* argv[])
     papan.pemain[0].simbol = 'X';
     papan.pemain[1].simbol = 'O';
     papan.ukuran = 3;
-    papan.kesulitan = 2;
+    papan.kesulitan = 3;
     mulaiPermainan();
     // setIsi(48, 'O');
     // tampilPapan(true);
