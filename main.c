@@ -50,9 +50,222 @@ void pilihan();
 void aturPermainan();
 void pilihanYaTidak();
 void tampilSkor();
+void urutSkor();
+void menuGameOver();
+bool cekHorizontal();
+bool cekVertikal();
 
 void biarkan(){}
 
+bool cekHorizontal(char simbol)
+{
+	int cek = cekMinimal(papan.ukuran);
+	int i,j,count=0;
+	
+	for (i=0; i<papan.ukuran; i++) {
+		count = 0;
+            for (j=0; j<papan.ukuran; j++) {
+            if (papan.isi[i][j] == simbol){
+                count++;
+			}else{
+            	count = 0;
+			}
+				if(count >= cek) 
+				return true;
+			}
+		}
+	return false;
+}
+
+bool cekVertikal(char simbol)
+{
+	int cek = cekMinimal(papan.ukuran);
+	int i,j,count=0;
+	
+	for (i=0; i<papan.ukuran; i++) {
+		count = 0;
+            for (j=0; j<papan.ukuran; j++) {
+            if (papan.isi[j][i] == simbol){
+                count++;
+			}else{
+            	count = 0;
+			}
+				if(count >= cek) 
+				return true;
+			}
+		}
+	return false;
+}
+
+void menuGameOver(int status)
+{
+	char pilih;
+	if (papan.pemain[1].isKomputer){
+	switch (status)
+	{
+	case 0:
+		system("cls");
+        fflush(stdout);
+        printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
+        printf("\n============================================\n");
+        tampilPapan(true);
+		printf("Anda telah memenangkan permainan!\n");
+		printf("Skor: %d\n", papan.pemain[0].skor);
+        menuOpsi("Q: Ke menu utama || R: Ulang Permainan || S: Simpan permainan\n");
+		printf("Masukan pilihan Anda: ");
+		scanf("%d", &pilih);
+		pilih = toupper(pilih);
+		switch (pilih){
+			case 'Q':
+			menuUtama();
+			break;
+			case 'R':
+			mulaiPermainan();
+			break;
+			case 'S':
+			simpanPermainan();
+			break;
+			default:
+			validInput = false;
+			menuGameOver(status);
+		}
+		break;
+	case 1:
+		//if (papan.pemain[0].skor > tmpl) ini teh klo yg skor lebih besaar dri yg di HS masuk nama klo ngga ya ga bsia wkw
+		system("cls");
+        fflush(stdout);
+        printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
+        printf("\n============================================\n");
+        tampilPapan(true);
+		printf("Anda kalah dalam permainan!\n");
+		printf("Skor: %d\n", papan.pemain[0].skor);
+        menuOpsi("Q: Ke menu utama || S: Simpan Skor\n");
+		pesanInvalid("Pilihan anda tidak valid\n");
+		printf("Masukan pilihan Anda: ");
+		scanf("%d", &pilih);
+		pilih = toupper(pilih);
+		switch (pilih){
+			case 'Q':
+			menuUtama();
+			break;
+			case 'S':
+			simpanSkor(papan.pemain[0].skor);
+			break;
+			default :
+			validInput = false;
+			menuGameOver(status);
+		}
+		break;
+	case 2:
+		system("cls");
+        fflush(stdout);
+        printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
+        printf("\n============================================\n");
+        tampilPapan(true);
+		printf("Permainan Seri!\n");
+		printf("Skor: %d\n", papan.pemain[0].skor);
+        menuOpsi("Q: Ke menu utama || R: Ulangi Permainan\n");
+		pesanInvalid("Pilihan anda tidak valid\n");
+		printf("Masukan pilihan Anda: ");
+		scanf("%d", &pilih);
+		pilih = toupper(pilih);
+		switch (pilih){
+			case 'Q':
+			menuUtama();
+			break;
+			case 'R':
+			mulaiPermainan();
+			break;
+			default :
+			validInput = false;
+			menuGameOver(status);
+			break;
+		}
+	}
+}
+	else {
+	char pilih;
+	switch (status)
+	{
+	case 0:
+		system("cls");
+        fflush(stdout);
+        printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
+        printf("\n============================================\n");
+        tampilPapan(true);
+		printf("%s telah mengalahkan %s", papan.pemain[0].nama, papan.pemain[1].nama);
+        menuOpsi("Q: Ke menu utama || R: Ulang Permainan");
+		printf("Masukan pilihan Anda: ");
+		scanf("%d", &pilih);
+		pilih = toupper(pilih);
+		switch (pilih){
+			case 'Q':
+			menuUtama();
+			break;
+			case 'R':
+			mulaiPermainan();
+			break;
+			default:
+			validInput = false;
+			menuGameOver(status);
+		}
+		break;
+	case 1:
+		system("cls");
+        fflush(stdout);
+        printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
+        printf("\n============================================\n");
+        tampilPapan(true);
+		printf("%s telah mengalahkan %s", papan.pemain[1].nama, papan.pemain[0].nama);
+        menuOpsi("Q: Ke menu utama || R: Ulangi Permainan\n");
+		pesanInvalid("Pilihan anda tidak valid\n");
+		printf("Masukan pilihan Anda: ");
+		scanf("%d", &pilih);
+		pilih = toupper(pilih);
+		switch (pilih){
+			case 'Q':
+			menuUtama();
+			break;
+			case 'R':
+			mulaiPermainan();
+			break;
+			default:
+			validInput = false;
+			menuGameOver(status);
+		}
+		break;
+	case 2:
+		system("cls");
+        fflush(stdout);
+        printf("Permainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
+        printf("\n============================================\n");
+        tampilPapan(true);
+		printf("Permainan Seri!\n");
+        menuOpsi("Q: Ke menu utama || R: Ulangi Permainan\n");
+		pesanInvalid("Pilihan anda tidak valid\n");
+		printf("Masukan pilihan Anda: ");
+		scanf("%d", &pilih);
+		pilih = toupper(pilih);
+		switch (pilih){
+			case 'Q':
+			menuUtama();
+			break;
+			case 'R':
+			mulaiPermainan();
+			break;
+			default:
+			validInput = false;
+			menuGameOver(status);
+		}
+		break;
+		}
+	}
+}
+
+void urutSkor()
+{
+
+}
 void tampilSkor()
 {
 	FILE *in;
@@ -159,7 +372,42 @@ void mulaiPermainan()
 
 void modeMultiPemain()
 {
+	char input [50], input2 [50], pilihan;
+	system("CLS");
 
+	papan.pemain[1].isKomputer = false;
+
+	printf("Multipemain");
+	printf("Harap masukkan nama pemain pertama.");
+	printf("Nama pemain pertama: ");
+	scanf("%^[\n]s", &input);
+	printf("Nama pemain kedua: ");
+	scanf("%^[\n]s", &input2);
+	shownama:
+	system("cls");
+	printf("Nama pemain pertama : %s\n", papan.pemain[0].nama);
+	printf("Nama pemain kedua   : %s\n", papan.pemain[1].nama);
+	printf("Q: Kembali | S: Mulai permainan\n");
+	pesanInvalid("Pilihan anda tidak valid\n");
+	printf("Masukan pilihan anda: ");
+	
+	scanf("%c", &pilihan);
+
+	pilihan = toupper(pilihan);
+
+	switch (pilihan)
+	{
+	case 'Q':
+		bagianPermainan();
+		break;
+	case 'S':
+		mulaiPermainan();
+		break;
+	default:
+		validInput = false;
+		goto shownama;
+		break;
+	}
 }
 
 void modeKomputer()
@@ -169,7 +417,7 @@ void modeKomputer()
 	system("CLS");
 	
 	papan.pemain[1].isKomputer = true;
-
+	printf ("Mode Komputer");
 	printf("Memilih Tingkat Kesulitan\n");
 	printf("Pilihlah tingkat kesulitan\n");
 	printf("[1] Mudah\n");
@@ -200,7 +448,7 @@ void modeKomputer()
 	}
 }
 
-void SimpanSkor(int *skor){
+void simpanSkor(int skor){
 
 	FILE *in;
 	int pilihan;
@@ -210,24 +458,42 @@ void SimpanSkor(int *skor){
 	//papan.pemain[0].skor = skor;
 
 	printf("Masukkan nama anda : ");
-	scanf("%[^\n]", &papan.pemain[0].nama[50]);
+	scanf("%[^\n]s", papan.pemain[0].nama);
 	
-	fprintf(in, "%s - %d\n", papan.pemain[0].nama[50], papan.pemain[0].skor);
+	fprintf(in, "%s - %d\n", papan.pemain[0].nama, papan.pemain[0].skor);
 	fclose(in);	
 }
 
 void bagianSkor()
 {
 	system("CLS");
+	char input;
 	printf ("\t\t\t\t\tDaftar 10 Besar Skor\n");
 	tampilSkor();
-
 	
 	printf("\n");
-	printf("\nTekan tombol apapun untuk kembali ke Menu Utama");
-	getch();
-	menuUtama();
+	printf("Q = Menu Utama || D = Hapus Data Skor Tertinggi\n");
+	pesanInvalid("Pilihan anda tidak valid\n");
+	printf("Masukan Pilihan Anda: ");
+	scanf("%c", &input);
 	
+	input = tolower(input);
+
+	switch (input)
+	{
+	case 'q' :
+		menuUtama();
+		break;
+	
+	case 'd' :
+
+		break;
+
+	default:
+		validInput = false;
+		bagianSkor();
+		break;
+	}
 }
 
 void bagianCaraMain()
