@@ -33,22 +33,18 @@
 #define SIMBOL_P2 O
 
 #ifdef DEBUG
-    #define PATH_GAME "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save"
     #define PATH_CARA "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/CaraBermain.txt"
+    #define PATH_SKOR "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/Skor.txt"
+    #define PATH_GAME "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save"
 #else
     #define PATH_GAME "/game/save"
-    #define PATH_CARA "caraBermain.txt"
+    #define PATH_CARA "CaraBermain.txt"
+    #define PATH_SKOR "Skor.txt"
 #endif
 
 /**
  * Enumerasi
  */
-typedef enum
-{
-    KALAH = -1,
-    SERI = 0,
-    MENANG = 1,
-} Kondisi;
 
 typedef enum
 {
@@ -76,10 +72,18 @@ typedef struct
 	int waktu;
 	int kesulitan;
 	int giliran;
+    int id;
 	bool isBermain;
 	char isi[10][10];
 	Pemain pemain[2];
 } Papan;
+
+typedef struct
+{
+    char nama[50];
+    char kesulitan[10];
+    int skor;
+} SkorInfo;
 
 /**
  * Variable Global
@@ -89,7 +93,9 @@ WORD consoleAttr;
 pthread_t thTimer, thGame;
 bool inputValid = true;
 bool jeda = false;
+int totalSkor = 0;
 Papan papan;
+SkorInfo sInfo[10];
 
 /**
  * Prototipe Modul
@@ -110,6 +116,7 @@ int getInputKomputer();
 char getIsi(int);
 int getTotalKosong();
 int imporPermainan(int, Papan*);
+int imporSkor();
 bool isBisaDiisi();
 int isiAcak();
 int isiKritis();
@@ -130,7 +137,7 @@ int panjangAngka();
 int parsePosisi();
 void pesanInvalid(char*);
 void reverse(char*, int);
-void saveSkor();
+int saveSkor();
 void setKomputer();
 void setMultipemain();
 void setModePermainan();
@@ -163,8 +170,10 @@ void initComponent()
 {
     CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
     memset(&papan, 0, sizeof(papan));
+    memset(&sInfo, 0, sizeof(sInfo));
     inputValid = true;
     jeda = false;
+    totalSkor = 0;
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
@@ -230,7 +239,7 @@ void menuUtama()
         bagianMain();
         break;
     case 2:
-        //bagianSkor();
+        bagianSkor();
         break;
     case 3:
         bagianCara();
@@ -743,7 +752,7 @@ int cekMinimal(int ukuran)
 bool cekPapan(char simbol)
 {
     if (cekDiagonal(simbol) || cekHorizontal(simbol) || cekVertikal(simbol)) return false;
-    if (getTotalKosong() == 0) 
+    else if (getTotalKosong() == 0) 
     {
         papan.giliran = 2;
         return false;
@@ -764,12 +773,15 @@ bool cekDiagonal(char simbol)
         j = 0;
         while(temp >= 0)
         {
-            if (papan.isi[temp][j] == simbol) counter++;
+            if (papan.isi[temp][j] == simbol)
+            {
+                counter++;
+                if (counter >= cek) return true;
+            }
             else counter = 0;
             temp--;
             j++;
         }
-        if (counter >= cek) return true;
     }
 
     // Diagonal [/] dari (0, papan.ukuran-1) sampai (papan.ukuran-1, papan.ukuran-1)
@@ -780,12 +792,15 @@ bool cekDiagonal(char simbol)
         j = papan.ukuran - 1;
         while (temp <= papan.ukuran - 1)
         {
-            if (papan.isi[temp][j] == simbol) counter++;
+            if (papan.isi[temp][j] == simbol)
+            {
+                counter++;
+                if (counter >= cek) return true;
+            }
             else counter = 0;
             temp++;
             j--;
         }
-        if (counter >= cek) return true;
     }
 
     // Diagonal [\] dari (0, papapn.ukuran-1) sampai (papan.ukuran-1, papan.ukuran-1)
@@ -796,12 +811,15 @@ bool cekDiagonal(char simbol)
         j = papan.ukuran - 1;
         while (temp >= 0)
         {
-            if (papan.isi[temp][j] == simbol) counter++;
+            if (papan.isi[temp][j] == simbol)
+            {
+                counter++;
+                if (counter >= cek) return true;
+            }
             else counter = 0;
             temp--;
             j--;
         }
-        if (counter >= cek) return true;
     }
 
     // Diagonal [\] dari (0,0) sampai (papan.ukuran-1, 0)
@@ -812,12 +830,15 @@ bool cekDiagonal(char simbol)
         j = 0;
         while (temp < papan.ukuran)
         {
-            if (papan.isi[temp][j] == simbol) counter++;
+            if (papan.isi[temp][j] == simbol)
+            {
+                counter++;
+                if (counter >= cek) return true;
+            }
             else counter = 0;
             temp++;
             j++;
         }
-        if (counter >= cek) return true;
     }
 
     return false;
@@ -833,10 +854,13 @@ bool cekHorizontal(char simbol)
 		counter = 0;
         for (j = 0; j<papan.ukuran; j++)
         {
-            if (papan.isi[i][j] == simbol) counter++;
+            if (papan.isi[i][j] == simbol)
+            {
+                counter++;
+                if (counter >= cek) return true;
+            }
             else counter = 0;		
 		}
-        if (counter >= cek) return true;
     }
 	return false;
 }
@@ -846,15 +870,18 @@ bool cekVertikal(char simbol)
 	int cek = cekMinimal(papan.ukuran);
 	int i, j, counter = 0;
 	
-	for (i = 0; i<papan.ukuran; i++)
+	for (i = 0; i < papan.ukuran; i++)
     {
 		counter = 0;
-        for (j = 0; j<papan.ukuran; j++)
+        for (j = 0; j < papan.ukuran; j++)
         {
-            if (papan.isi[j][i] == simbol) counter++;
+            if (papan.isi[j][i] == simbol)
+            {
+                counter++;
+                if(counter >= cek) return true;
+            }
             else counter = 0;
         }
-        if(counter >= cek) return true;
     }
 	return false;
 }
@@ -1141,29 +1168,65 @@ void menuMenang(int status)
     menuMenang(status);
 }
 
+void menuSaveSkor()
+{
+    clearConsole();
+    printf("======================================================");
+    printf("\nPermainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
+    printf("\n======================================================");
+    printf("\n");
+    printf("\nSkor anda telah tersimpan");
+    printf("\n");
+    showSkor();
+    printf("\n");
+    printf("\nTekan apapun untuk melanjutkan");
+
+    while (true)
+    {
+        fflush(stdin);
+        char c = getch();
+        if ((int)c) return menuUtama();
+    }
+}
+
 void menuKalah(int status)
 {
     char input = '\000';
+    int skor = papan.pemain[0].skor;
     printf("\n%s kalah dalam permainan", papan.pemain[0].nama);
     printf("\nSkor: %d", papan.pemain[0].skor);
-    printf("\nQ: Ke menu utama | R: Ulangi permainan (skor akan hilang)");
+    printf("\nQ: Ke menu utama | R: Ulangi Permainan");
+    if (skor > sInfo[9].skor) printf(" | S: Simpan Skor");
     printf("\n");
     pesanInvalid("\nPilihan anda tidak valid");
     printf("\nMasukkan pilihan: ");
     getInput(&input);
-    switch (input)
+    if (input == 'Q')
     {
-    case 'Q':
-        return menuUtama();
-        break;
-    case 'R':
         papan.pemain[0].skor = 0;
+        if (papan.id != 0) simpanPermainan(papan.id);
+        return menuUtama();
+    }
+    else if (input == 'R')
+    {
+        papan.pemain[0].skor = 0;
+        if (papan.id != 0) simpanPermainan(papan.id);
         return setPermainan();
-        break;
-    default:
+    }
+    else if (skor > sInfo[9].skor && input == 'S')
+    {
+        int status = saveSkor();
+        if (status == 1)
+        {
+            papan.pemain[0].skor = 0;
+            if (papan.id != 0) simpanPermainan(papan.id);
+            return menuSaveSkor();
+        }
+    }
+    else
+    {
         inputValid = false;
         menuGameOver(status);
-        break;
     }
 }
 
@@ -1258,7 +1321,7 @@ void menuSimpanSelesai()
     printf("\nBerikut merupakan data permainan yang telah disimpan");
     printf("\nLabel Papan       : %s", papan.nama);
     printf("\nTingkat Kesulitan : %s", kesulitan);
-    printf("\nPermainan berhasil disimpan");
+    printf("\nUkuran Papan      : %d x %d", papan.kesulitan, papan.kesulitan);
     printf("\nQ: Ke menu utama | R: Lanjutkan Permainan");
     printf("\n");
     pesanInvalid("\nPilihan anda tidak valid");
@@ -1339,7 +1402,7 @@ void menuGameOver(int status)
 void bagianCara()
 {
     char input = '\000';
-    char tampil[6000] = {'\000'};
+    char fileCara[255] = {'\000'};
     FILE *in;
     clearConsole();
 	if((in=fopen(PATH_CARA, "r")) == NULL)
@@ -1348,7 +1411,7 @@ void bagianCara()
 		fclose(in);
 	}
     //baca isi file dengan gets lalu simpan ke tampil
-	while(fgets(tampil, sizeof(tampil), in)) printf("%s", &tampil);
+	while(fgets(fileCara, sizeof(fileCara), in)) printf("%s", &fileCara);
     fclose(in);
     printf("\n");
     printf("\nTekan tombol apapun untuk kembali ke Menu Utama");
@@ -1359,6 +1422,125 @@ void bagianCara()
         char input = getch();
         if((int)input) return menuUtama();
     }
+}
+
+void showSkor()
+{
+    int status = imporSkor();
+    if (status == 0)
+    {
+        int i = 0;
+        for (i = 0; i < 10; i++)
+        {
+            if (strlen(sInfo[i].nama) <= 0) continue;
+            printf("[%d.] %-15.25s\t | %-5.10s | %d", i + 1, sInfo[i].nama, sInfo[i].kesulitan, sInfo[i].skor);
+            if (i != 10) printf("\n");
+        }
+    }
+    else printf("Tidak ada.");
+}
+
+void bagianSkor()
+{
+    clearConsole();
+    printf("======================================================");
+    printf("\nDaftar 10 Pemain dengan Skor Tertinggi");
+    printf("\n======================================================");
+    printf("\n");
+    printf("\n");
+    showSkor();
+    printf("\n");
+    printf("\nTekan tombol apapun untuk keluar");
+    while (true)
+	{
+        fflush(stdin);
+
+        char input = getch();
+        if((int)input) return menuUtama();
+	}
+}
+
+int imporSkor()
+{
+    int i, j;
+    totalSkor = 0;
+    char fileSkor[255] = {'\000'};
+    FILE *in;
+    memset(sInfo, 0, sizeof(sInfo));
+    if ((in = fopen(PATH_SKOR, "r")) == NULL)
+    {
+		printf("Error Opening File"); //tutup program karena file ga ada
+		fclose(in);
+        return 1;
+	}
+    while (!feof(in))
+    {
+		fscanf(in,"%[^-]-%[^-]-%d\n", &sInfo[totalSkor].nama, &sInfo[totalSkor].kesulitan, &sInfo[totalSkor].skor);
+		totalSkor++;
+	}
+    fclose(in);
+    return 0;
+}
+
+void sortSkor()
+{
+    SkorInfo temp;
+    int i, j;
+
+    for (i = 0; i < totalSkor; i++)
+    {
+        for (j = totalSkor - 1; j > i; j--)
+        {
+            if (sInfo[j].skor > sInfo[j - 1].skor){
+                memset(&temp, 0, sizeof(temp));
+				memcpy(temp.nama, sInfo[j].nama, strlen(sInfo[j].nama));
+                memcpy(temp.kesulitan, sInfo[j].kesulitan, strlen(sInfo[j].kesulitan));
+                temp.skor = sInfo[j].skor;
+
+                memcpy(sInfo[j].nama, sInfo[j - 1].nama, strlen(sInfo[j - 1].nama));
+                memcpy(sInfo[j].kesulitan, sInfo[j - 1].kesulitan, strlen(sInfo[j - 1].kesulitan));
+                sInfo[j].skor = sInfo[j - 1].skor;
+
+                memcpy(sInfo[j - 1].nama, temp.nama, strlen(temp.nama));
+                memcpy(sInfo[j - 1].kesulitan, temp.kesulitan, strlen(temp.kesulitan));
+                sInfo[j - 1].skor = temp.skor;
+			}
+        }
+    }
+}
+
+int saveSkor()
+{
+    FILE *in;
+    int i;
+    char kesulitan[10] = {'\000'};
+    char fileSkor[255] = {'\000'};
+    sortSkor();
+    memset(&sInfo[9].nama, 0, strlen(sInfo[9].nama));
+    memcpy(&sInfo[9].nama, papan.pemain[0].nama, strlen(papan.pemain[0].nama));
+    memcpy(kesulitan, getKesulitanStr(papan.kesulitan), strlen(getKesulitanStr(papan.kesulitan)));
+    if ((in = fopen(PATH_SKOR, "w")) == NULL)
+    {
+		printf("Error Opening File"); //tutup program karena file ga ada
+		fclose(in);
+        return 1;        
+    }
+    for (i = 0; i < 10; i++)
+    {
+        if (strlen(sInfo[i].nama) == 0) continue;
+        
+        char skor[10] = {'\000'};
+        itoa(sInfo[i].skor, skor, 10);
+        memset(fileSkor, 0, sizeof(fileSkor));
+        memcpy(fileSkor, sInfo[i].nama, strlen(sInfo[i].nama));
+        memcpy(fileSkor + strlen(fileSkor), " - ", 3);
+        memcpy(fileSkor + strlen(fileSkor), sInfo[i].kesulitan, strlen(sInfo[i].nama));
+        memcpy(fileSkor + strlen(fileSkor), " - ", 3);
+        memcpy(fileSkor + strlen(fileSkor), skor, strlen(skor));
+        fputs(fileSkor, in);
+    }
+    fclose(in);
+    return 0;
 }
 
 void bagianKeluar()
