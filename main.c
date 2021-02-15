@@ -34,7 +34,7 @@
 
 #ifdef DEBUG
     #define PATH_CARA "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/CaraBermain.txt"
-    #define PATH_SKOR "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/Skor.txt"
+    #define PATH_SKOR "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/skor"
     #define PATH_GAME "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save"
 #else
     #define PATH_GAME "/game/save"
@@ -92,7 +92,6 @@ WORD consoleAttr;
 pthread_t thTimer, thGame;
 bool inputValid = true;
 bool jeda = false;
-int totalSkor = 0;
 int idPapan = 0; // 0 = papan baru
 Papan papan;
 SkorInfo sInfo[10];
@@ -159,6 +158,8 @@ void upperCase(char*);
  */
 int main(int argc, char *argv[])
 {
+    int i = imporSkor();
+    printf("%d", sInfo[9].skor);
     initComponent();
 	menuUtama();
 	return 0;
@@ -174,7 +175,6 @@ void initComponent()
     memset(&sInfo, 0, sizeof(sInfo));
     inputValid = true;
     jeda = false;
-    totalSkor = 0;
     idPapan = 0;
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
@@ -261,6 +261,7 @@ void bagianMain()
 {
     char input = '\000';
     clearConsole();
+    memset(&papan, 0, sizeof(papan));
     printf("======================================================");
     printf("\nMulai Permainan");
     printf("\n======================================================");
@@ -535,6 +536,10 @@ int savePermainan(int pos)
     char fileData[255] = {'\000'};
     char fileLokasi[255] = PATH_GAME;
     char *dataPapan = malloc(papanSize);
+    memset(papan.pemain[0].nama, 0, sizeof(papan.pemain[0].nama));
+    memset(papan.pemain[1].nama, 0, sizeof(papan.pemain[1].nama));
+    memcpy(papan.pemain[0].nama, "Anda", 4);
+    memcpy(papan.pemain[1].nama, "Komputer", 9);
     memcpy(fileData, fileLokasi, strlen(fileLokasi));
     itoa(pos, fileData + strlen(fileData), 10);
     memcpy(fileData + strlen(fileData), ".dat", 4);
@@ -692,7 +697,7 @@ void* threadPermainan()
             }
             else
             {
-                if (papan.waktu >= 0) printf("\nMasukkan nilai petak dalam waktu %d detik: ", papan.waktu);
+                if (papan.waktu >= 0) printf("\nMasukkan posisi petak dalam waktu %d detik: ", papan.waktu);
                 else printf("\nWaktu habis, masukkan posisi petak manapun untuk melanjutkan: ");
                 fgets(input, 4, stdin);
 
@@ -1191,11 +1196,10 @@ void menuSaveSkor()
     printf("\n======================================================");
     printf("\n");
     printf("\nSkor anda: %d", papan.pemain[0].skor);
-    printf("\n");
     showSkor();
-    printf("Harap masukkan nama anda untuk melanjutkan");
+    printf("\nHarap masukkan nama anda untuk melanjutkan");
     printf("\n");
-    pesanInvalid("Harap masukkan setidaknya 3 karakter");
+    pesanInvalid("\nHarap masukkan setidaknya 3 karakter");
     printf("\nMasukkan nama: ");
     fflush(stdin);
     scanf("%[^\n]s", papan.pemain[0].nama);
@@ -1208,7 +1212,6 @@ void menuSaveSkor()
     printf("======================================================");
     printf("\nDaftar 10 Pemain dengan Skor Tertinggi");
     printf("\n======================================================");
-    printf("\n");
     printf("\n");
     int status = saveSkor();
     if (status == 0) showSkor();
@@ -1230,7 +1233,6 @@ void menuKalah(int status)
     printf("\n%s kalah dalam permainan", papan.pemain[0].nama);
     printf("\nSkor: %d", papan.pemain[0].skor);
     printf("\nQ: Ke menu utama | R: Ulangi Permainan");
-    int i = imporSkor();
     printf("%d", sInfo[9].skor);
     if (skor > sInfo[9].skor) printf(" | S: Simpan Skor");
     printf("\n");
@@ -1454,18 +1456,13 @@ void bagianCara()
 void showSkor()
 {
     int status = imporSkor();
-    sortSkor();
-    if (status == 0)
+    int i = 0;
+    for (i = 0; i < 10; i++)
     {
-        int i = 0;
-        for (i = 0; i < 10; i++)
-        {
-            if (strlen(sInfo[i].nama) <= 0) continue;
-            printf("[%d.] %-15.25s\t | %-5.10s | %d", i + 1, sInfo[i].nama, sInfo[i].kesulitan, sInfo[i].skor);
-            if (i != 10) printf("\n");
-        }
+        printf("\n[%d.] ", i + 1);
+        if (strlen(sInfo[i].nama) == 0) printf("%-15.25s\t | %-5.10s | %s", "Kosong", "-", "-");
+        else printf("%-15.25s\t | %-5.10s | %d", sInfo[i].nama, sInfo[i].kesulitan, sInfo[i].skor);
     }
-    else printf("Tidak ada.");
 }
 
 void bagianSkor()
@@ -1474,7 +1471,6 @@ void bagianSkor()
     printf("======================================================");
     printf("\nDaftar 10 Pemain dengan Skor Tertinggi");
     printf("\n======================================================");
-    printf("\n");
     printf("\n");
     showSkor();
     printf("\n");
@@ -1488,25 +1484,79 @@ void bagianSkor()
 	}
 }
 
+// int imporSkor()
+// {
+//     int i, j;
+//     totalSkor = 0;
+//     char fileSkor[255] = {'\000'};
+//     FILE *in;
+//     memset(sInfo, 0, sizeof(sInfo));
+//     if ((in = fopen(PATH_SKOR, "r")) == NULL)
+//     {
+// 		printf("Error Opening File"); //tutup program karena file ga ada
+// 		fclose(in);
+//         return 1;
+// 	}
+//     while (!feof(in))
+//     {
+// 		fscanf(in, "%[^-]-%[^-]-%d\n", &sInfo[totalSkor].nama, &sInfo[totalSkor].kesulitan, &sInfo[totalSkor].skor);
+//         if (sInfo[totalSkor].nama[strlen(sInfo[totalSkor].nama) - 1] != '\000')
+//         {
+//              sInfo[totalSkor].nama[strlen(sInfo[totalSkor].nama) - 1] = '\000';
+//         }
+//         if (sInfo[totalSkor].kesulitan[strlen(sInfo[totalSkor].kesulitan) - 1] != '\000')
+//         {
+//              sInfo[totalSkor].kesulitan[strlen(sInfo[totalSkor].kesulitan) - 1] = '\000';
+//         }
+// 		totalSkor++;
+// 	}
+//     fclose(in);
+//     return 0;
+// }
+
 int imporSkor()
 {
-    int i, j;
-    totalSkor = 0;
-    char fileSkor[255] = {'\000'};
-    FILE *in;
-    memset(sInfo, 0, sizeof(sInfo));
-    if ((in = fopen(PATH_SKOR, "r")) == NULL)
-    {
-		printf("Error Opening File"); //tutup program karena file ga ada
-		fclose(in);
-        return 1;
-	}
-    while (!feof(in))
-    {
-		fscanf(in,"%[^-]-%[^-]-%d\n", &sInfo[totalSkor].nama, &sInfo[totalSkor].kesulitan, &sInfo[totalSkor].skor);
-		totalSkor++;
-	}
-    fclose(in);
+    int skorSize = sizeof(sInfo);
+    char fileData[255] = {'\000'};
+    char *fileLokasi = PATH_SKOR;
+    char *dataSkor = malloc(skorSize + 1);
+    memset(dataSkor, 0, skorSize + 1);
+    memcpy(fileData, fileLokasi, strlen(fileLokasi));
+    memcpy(fileData + strlen(fileData), ".dat", 4);
+    
+    FILE *pFile = fopen(fileData, "rb");
+    if (pFile == NULL) return 1;
+    if (fread(dataSkor, skorSize, 1, pFile) != 1) return 1;
+    memset(&sInfo, 0, sizeof(sInfo));
+    memcpy(sInfo, dataSkor, skorSize);
+    free(dataSkor);
+    fclose(pFile);
+    return 0;
+}
+
+int saveSkor()
+{
+    memset(sInfo[9].nama, 0, sizeof(sInfo[9].nama));
+    memset(sInfo[9].kesulitan, 0, sizeof(sInfo[9].kesulitan));
+    memcpy(sInfo[9].nama, papan.pemain[0].nama, strlen(papan.pemain[0].nama));
+    memcpy(sInfo[9].kesulitan, getKesulitanStr(papan.kesulitan), strlen(getKesulitanStr(papan.kesulitan)));
+    sInfo[9].skor = papan.pemain[0].skor;
+    sortSkor();
+
+    int skorSize = sizeof(sInfo);
+    char fileData[255] = {'\000'};
+    char *fileLokasi = PATH_SKOR;
+    char *dataSkor = malloc(skorSize + 1);
+    memset(dataSkor, 0, skorSize + 1);
+    memcpy(fileData, fileLokasi, strlen(fileLokasi));
+    memcpy(fileData + strlen(fileData), ".dat", 4);
+    memcpy(dataSkor, sInfo, skorSize);
+    
+    FILE *pFile = fopen(fileData, "wb");
+    if (pFile == NULL) return 1;
+    if (fwrite(dataSkor, skorSize, 1, pFile) != 1) return 1;
+    fclose(pFile);
+    free(dataSkor);
     return 0;
 }
 
@@ -1515,20 +1565,26 @@ void sortSkor()
     SkorInfo temp;
     int i, j;
 
+    int totalSkor = 10;
     for (i = 0; i < totalSkor; i++)
     {
         for (j = totalSkor - 1; j > i; j--)
         {
-            if (sInfo[j].skor > sInfo[j - 1].skor){
+            if (sInfo[j].skor > sInfo[j - 1].skor)
+            {
                 memset(&temp, 0, sizeof(temp));
 				memcpy(temp.nama, sInfo[j].nama, strlen(sInfo[j].nama));
                 memcpy(temp.kesulitan, sInfo[j].kesulitan, strlen(sInfo[j].kesulitan));
                 temp.skor = sInfo[j].skor;
 
+                memset(sInfo[j].nama, 0, sizeof(sInfo[j].nama));
+                memset(sInfo[j].kesulitan, 0, sizeof(sInfo[j].kesulitan));
                 memcpy(sInfo[j].nama, sInfo[j - 1].nama, strlen(sInfo[j - 1].nama));
                 memcpy(sInfo[j].kesulitan, sInfo[j - 1].kesulitan, strlen(sInfo[j - 1].kesulitan));
                 sInfo[j].skor = sInfo[j - 1].skor;
 
+                memset(sInfo[j - 1].nama, 0, sizeof(sInfo[j - 1].nama));
+                memset(sInfo[j - 1].kesulitan, 0, sizeof(sInfo[j - 1].kesulitan));
                 memcpy(sInfo[j - 1].nama, temp.nama, strlen(temp.nama));
                 memcpy(sInfo[j - 1].kesulitan, temp.kesulitan, strlen(temp.kesulitan));
                 sInfo[j - 1].skor = temp.skor;
@@ -1537,41 +1593,41 @@ void sortSkor()
     }
 }
 
-int saveSkor()
-{
-    FILE *in;
-    int i;
-    char kesulitan[10] = {'\000'};
-    char fileSkor[255] = {'\000'};
-    sortSkor();
-    memset(&sInfo[9].nama, 0, sizeof(&sInfo[9].nama));
-    memcpy(&sInfo[9].nama, papan.pemain[0].nama, strlen(papan.pemain[0].nama));
-    memcpy(&sInfo[9].kesulitan, getKesulitanStr(papan.kesulitan), strlen(getKesulitanStr(papan.kesulitan)));
-    sInfo[9].skor = papan.pemain[0].skor;
-    if ((in = fopen(PATH_SKOR, "w")) == NULL)
-    {
-		printf("Error Opening File"); //tutup program karena file ga ada
-		fclose(in);
-        return 1;        
-    }
-    for (i = 0; i < 10; i++)
-    {
-        if (strlen(sInfo[i].nama) == 0) continue;
-        
-        char skor[10] = {'\000'};
-        itoa(sInfo[i].skor, skor, 10);
-        memset(fileSkor, 0, sizeof(fileSkor));
-        memcpy(fileSkor, sInfo[i].nama, strlen(sInfo[i].nama));
-        memcpy(fileSkor + strlen(fileSkor), " - ", 3);
-        memcpy(fileSkor + strlen(fileSkor), sInfo[i].kesulitan, strlen(sInfo[i].nama));
-        memcpy(fileSkor + strlen(fileSkor), " - ", 3);
-        memcpy(fileSkor + strlen(fileSkor), skor, strlen(skor));
-        memcpy(fileSkor + strlen(fileSkor), "\n", 1);
-        fputs(fileSkor, in);
-    }
-    fclose(in);
-    return 0;
-}
+// int saveSkor()
+// {
+//     FILE *in;
+//     int i;
+//     char kesulitan[10] = {'\000'};
+//     char fileSkor[255] = {'\000'};
+//     sortSkor();
+//     memset(&sInfo[9].nama, 0, sizeof(&sInfo[9].nama));
+//     memcpy(&sInfo[9].nama, papan.pemain[0].nama, strlen(papan.pemain[0].nama));
+//     memcpy(&sInfo[9].kesulitan, getKesulitanStr(papan.kesulitan), strlen(getKesulitanStr(papan.kesulitan)));
+//     sInfo[9].skor = papan.pemain[0].skor;
+//     if ((in = fopen(PATH_SKOR, "w")) == NULL)
+//     {
+// 		printf("Error Opening File"); //tutup program karena file ga ada
+// 		fclose(in);
+//         return 1;        
+//     }
+//     for (i = 0; i < 10; i++)
+//     {
+//         if (strlen(sInfo[i].nama) == 0) continue;
+//      
+//         char skor[10] = {'\000'};
+//         itoa(sInfo[i].skor, skor, 10);
+//         memset(fileSkor, 0, sizeof(fileSkor));
+//         memcpy(fileSkor, sInfo[i].nama, strlen(sInfo[i].nama));
+//         memcpy(fileSkor + strlen(fileSkor), " - ", 3);
+//         memcpy(fileSkor + strlen(fileSkor), sInfo[i].kesulitan, strlen(sInfo[i].nama));
+//         memcpy(fileSkor + strlen(fileSkor), " - ", 3);
+//         memcpy(fileSkor + strlen(fileSkor), skor, strlen(skor));
+//         memcpy(fileSkor + strlen(fileSkor), "\n", 1);
+//         fputs(fileSkor, in);
+//     }
+//     fclose(in);
+//     return 0;
+// }
 
 void bagianKeluar()
 {
