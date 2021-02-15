@@ -29,8 +29,10 @@
 #define GAME_TIMER 10
 #define KEYBOARD_ENTER 13
 #define KEYBOARD_ESC 27
-#define SIMBOL_P1 X
-#define SIMBOL_P2 O
+#define SIMBOL_P1 'X'
+#define SIMBOL_P2 'O'
+#define START_MINIMAX_5x5 22
+#define START_MINIMAX_7x7 46
 
 #ifdef DEBUG
     #define PATH_CARA "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/CaraBermain.txt"
@@ -108,7 +110,10 @@ bool cekHorizontal(char);
 bool cekVertikal(char);
 bool cekPapan(char);
 void clearConsole();
+int deletePermainan(int);
+int deleteSkor();
 int eval();
+int getJangkauan(int, int);
 char* getKesulitanStr(int);
 void getInput(char*);
 int getInputKomputer();
@@ -122,6 +127,8 @@ int isiKritis();
 void initComponent();
 void jedaPermainan();
 void menuGameOver(int);
+void menuHapusPermainan();
+void menuHapusSkor();
 void menuKalah(int);
 void menuMenang(int);
 void menuMultipemain(int);
@@ -130,7 +137,7 @@ void menuSimpan();
 void menuSimpanSiap(int);
 void menuSimpanSelesai();
 void menuUtama();
-int minimax(bool);
+int minimax(bool, int, int, int, int);
 void mulaiPermainan();
 int panjangAngka();
 int parsePosisi();
@@ -158,8 +165,6 @@ void upperCase(char*);
  */
 int main(int argc, char *argv[])
 {
-    int i = imporSkor();
-    printf("%d", sInfo[9].skor);
     initComponent();
 	menuUtama();
 	return 0;
@@ -179,6 +184,7 @@ void initComponent()
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+    SetConsoleTitle("Tic-Tac-Toe Game");
     consoleAttr = consoleInfo.wAttributes;
 }
 
@@ -288,8 +294,7 @@ void bagianMain()
             memset(papan.pemain[1].nama, '\000', sizeof(papan.pemain[1].nama));
             memcpy(papan.pemain[0].nama, "Anda", 4);
             memcpy(papan.pemain[1].nama, "Komputer", 9);
-            if (papan.ukuran == 3) setKomputer();
-            else papan.kesulitan = 1;
+            setKomputer();
         }
         else setMultipemain();
         break;
@@ -426,13 +431,26 @@ void setMultipemain()
     printf("\nPermainan Baru");
     printf("\n======================================================");
     printf("\n");
+    pesanInvalid("\nNama harus memiliki (3-20) karakter");
 	printf("\nHarap masukkan nama pemain");
 	printf("\nNama pemain pertama: ");
     fflush(stdin);
-	scanf("%[^\n]s", input1);
+    fgets(input1, 25, stdin);
+    if (input1[strlen(input1) - 1] == '\n') input1[strlen(input1) - 1] = '\000';
+    if (strlen(input1) < 3 || strlen(input1) >= 25)
+    {
+        inputValid = false;
+        return setMultipemain();
+    }
 	printf("Nama pemain kedua: ");
     fflush(stdin);
-	scanf("%[^\n]s", input2);
+	fgets(input2, 25, stdin);
+    if (input2[strlen(input2) - 1] == '\n') input2[strlen(input2) - 1] = '\000';
+    if (strlen(input2) < 3 || strlen(input2) >= 25)
+    {
+        inputValid = false;
+        return setMultipemain();
+    }
     memset(papan.pemain[0].nama, '\000', sizeof(papan.pemain[0].nama));
 	memset(papan.pemain[1].nama, '\000', sizeof(papan.pemain[1].nama));
     memcpy(papan.pemain[0].nama, input1, strlen(input1));
@@ -466,6 +484,32 @@ void setMultipemain()
 	}
 }
 
+void menuHapusPermainan()
+{
+    clearConsole();
+    printf("======================================================");
+    printf("\nPermainan Lama");
+    printf("\n======================================================");
+    printf("\n");
+    printf("\nApakah anda ingin menghapus semua data permainan?");
+    printf("\nTekan 'Enter' untuk setuju atau 'Esc' untuk ke menu utama");
+    while (true)
+    {
+        fflush(stdin);
+        char input = getch();
+        if ((int)input == KEYBOARD_ENTER)
+        {
+            int i;
+            for (i = 1; i <= 5; i++)
+            {
+                int status = deletePermainan(i);
+            }
+            return bagianMain();
+        }
+        else if ((int)input == KEYBOARD_ESC) return setPermainanLama();
+    }
+}
+
 void setPermainanLama()
 {
     char input = '\000';
@@ -476,12 +520,13 @@ void setPermainanLama()
     printf("\n");
     printf("\nPilihlah permainan yang ingin anda lanjutkan");
     showPermainanLama();
+    printf("\nQ: Kembali | D: Hapus Semua");
     printf("\n");
-    printf("\nQ: Kembali");
     pesanInvalid("\nPilihan data permainan tidak valid");
     printf("\nMasukkan pilihan: ");
     getInput(&input);
     if (input == 'Q') return bagianMain();
+    else if (input == 'D') return menuHapusPermainan();
     
     int pilihanInt = atoi(&input);
     if (pilihanInt > 0 && pilihanInt <= 5)
@@ -555,6 +600,16 @@ int savePermainan(int pos)
     return 0;
 }
 
+int deletePermainan(int pos)
+{
+    char fileData[255] = {'\000'};
+    char fileLokasi[255] = PATH_GAME;
+    memcpy(fileData, fileLokasi, strlen(fileLokasi));
+    itoa(pos, fileData + strlen(fileData), 10);
+    memcpy(fileData + strlen(fileData), ".dat", 4);
+    return remove(fileData);
+}
+
 void reverse(char* data, int length)
 {
     int i = 0;
@@ -591,7 +646,7 @@ void setPermainan()
     }
     else printf("\n[Mode Multipemain]");
     printf("\n");
-    printf("\nTekan Enter untuk memulai permainan atau 'Esc' untuk ke menu utama");
+    printf("\nTekan 'Enter' untuk memulai permainan atau 'Esc' untuk ke menu utama");
 
     while (true)
     {
@@ -607,8 +662,8 @@ void mulaiPermainan()
     bool sesuai = true;
     papan.giliran = 1;
     papan.isBermain = true;
-    papan.pemain[0].simbol = 'X';
-    papan.pemain[1].simbol = 'O';
+    papan.pemain[0].simbol = SIMBOL_P1;
+    papan.pemain[1].simbol = SIMBOL_P2;
     memset(papan.isi, '\000', sizeof(papan.isi));
     do
     {
@@ -642,7 +697,7 @@ void mulaiPermainan()
     
     int status;
     if (papan.giliran == 2) status = 2;
-    else if (!cekPapan('X')) 
+    else if (!cekPapan(SIMBOL_P1)) 
     {
         status = 0;
         papan.pemain[0].skor += 100;
@@ -737,7 +792,7 @@ void jedaPermainan()
     printf("\nKeluar dari permainan ini?");
     if (papan.waktu >= 0) printf("\nWaktu tersisa: %d detik", papan.waktu);
     else printf("\nWaktu habis. Posisi akan diisi secara acak");
-    printf("\nTekan Enter untuk keluar atau 'Esc' untuk melanjutkan permainan\n");
+    printf("\nTekan 'Enter' untuk keluar atau 'Esc' untuk melanjutkan permainan\n");
     while (true)
     {
         fflush(stdin);
@@ -964,13 +1019,13 @@ void showPapan(bool tampilPosisi)
             int k = 0;
             for (k = 0; k < strlen(cGaris); k++)
             {
-                if (cGaris[k] == 'X')
+                if (cGaris[k] == SIMBOL_P1)
                 {
                     SetConsoleTextAttribute(hConsole, 12);
                     printf("%c", cGaris[k]);
                     SetConsoleTextAttribute(hConsole, consoleAttr);
                 }
-                else if (cGaris[k] == 'O')
+                else if (cGaris[k] == SIMBOL_P2)
                 {
                     SetConsoleTextAttribute(hConsole, 10);
                     printf("%c", cGaris[k]);
@@ -1017,20 +1072,36 @@ void upperCase(char *data)
     }
 }
 
+int getJangkauan(int kesulitan, int ukuran)
+{
+    switch (kesulitan)
+    {
+    case 2: // sedang
+        if (ukuran == 3) return 2;
+        if (ukuran == 5) return 3;
+        if (ukuran == 7) return 4;
+    case 3: // sulit
+        if (ukuran == 3) return 4;
+        if (ukuran == 5) return 5;
+        if (ukuran == 7) return 6;
+    default: return 0;
+    }
+}
+
 int getInputKomputer()
 {
     int input = 0;
+    int jangkauan = getJangkauan(papan.kesulitan, papan.ukuran);
     switch (papan.kesulitan)
     {
     case 1: // mudah
         input = isiAcak();
         break;
     case 2: // sedang
-        if (getTotalKosong() % papan.ukuran == 0) input = isiKritis();
-        else input = isiAcak();
+        input = isiKritis(jangkauan);
         break;
     case 3: // sulit
-        input = isiKritis();
+        input = isiKritis(jangkauan);
         break;
     }
     return input;
@@ -1047,22 +1118,80 @@ int isiAcak()
     return pos;
 }
 
-int isiKritis()
+int minimax(bool isMax, int jangkauan, int alpha, int beta, int maxJangkauan)
 {
-    if (getTotalKosong() == papan.ukuran * papan.ukuran - 1) return isiAcak();
-    
+    int giliranLawan = (papan.giliran == 1)? 0 : 1;
+    int skor = eval();
+    if (skor == 10) return skor - jangkauan;
+    else if (skor == -10) return skor + jangkauan;
+    else if (!isBisaDiisi()) return 0;
+
+    if (jangkauan >= maxJangkauan) return 0;
+    int skorX = (isMax)? -10000 : 10000;
+    char simbol = (isMax)? papan.pemain[papan.giliran].simbol : papan.pemain[giliranLawan].simbol;
+    int i, j;
+    if (isMax)
+    {
+        for (i = 0; i < papan.ukuran; i++)
+        {
+            for (j = 0; j < papan.ukuran; j++)
+            {
+                if (papan.isi[i][j] == '\000')
+                {
+                    papan.isi[i][j] = simbol;
+                    int skor = minimax(!isMax, jangkauan + 1, alpha, beta, maxJangkauan);
+                    papan.isi[i][j] = '\000';
+                    skorX = max(skor, skorX);
+                    alpha = max(skor, alpha);
+                    if (alpha >= beta) return alpha;
+                }
+            }
+        }
+        return alpha;
+    }
+    else
+    {
+        for (i = 0; i < papan.ukuran; i++)
+        {
+            for (j = 0; j < papan.ukuran; j++)
+            {
+                if (papan.isi[i][j] == '\000')
+                {
+                    papan.isi[i][j] = papan.pemain[giliranLawan].simbol;
+                    int skor = minimax(!isMax, jangkauan + 1, alpha, beta, maxJangkauan);
+                    papan.isi[i][j] = '\000';
+                    skorX = min(skor, skorX);
+                    beta = min(skor, beta);
+                    if (beta <= alpha) return beta;
+                }
+            }
+        }
+        return beta;
+    }
+}
+
+int isiKritis(int maxJangkauan)
+{
+    if (
+        ((papan.ukuran == 5) && (getTotalKosong() > START_MINIMAX_5x5)) ||
+        ((papan.ukuran == 7) && (getTotalKosong() > START_MINIMAX_7x7))
+    ) return isiAcak();
     int skorX = -10000;
     int posX = -1;
     int posY = -1;
+    int jangkauan = 0;
+    int alpha = -10000;
+    int beta = 10000;
+
     int i, j;
-    for (int i = 0; i < papan.ukuran; i++)
+    for (i = 0; i < papan.ukuran; i++)
     {
-        for (int j = 0; j < papan.ukuran; j++)
+        for (j = 0; j < papan.ukuran; j++)
         {
             if (papan.isi[i][j] == '\000')
             {
                 papan.isi[i][j] = papan.pemain[papan.giliran].simbol;
-                int skor = minimax(false);
+                int skor = minimax(false, jangkauan, alpha, beta, maxJangkauan);
                 papan.isi[i][j] = '\000';
                 if (skor > skorX)
                 {
@@ -1074,50 +1203,6 @@ int isiKritis()
         }
     }
     return parsePosisi(posX, posY);
-}
-
-int minimax(bool isMax)
-{
-    int giliranLawan = (papan.giliran == 1)? 0 : 1;
-    int skor = eval();
-    if (skor == 10 || skor == -10) return skor;
-    if (!isBisaDiisi()) return 0;
-    if (isMax)
-    {
-        int skorX = -10000;
-        int i, j;
-        for (i = 0; i < papan.ukuran; i++)
-        {
-            for (j = 0; j < papan.ukuran; j++)
-            {
-                if (papan.isi[i][j]=='\000')
-                {
-                    papan.isi[i][j] = papan.pemain[papan.giliran].simbol;
-                    skorX = max(skorX, minimax(!isMax));
-                    papan.isi[i][j] = '\000';
-                }
-            }
-        }
-        return skorX;
-    }
-    else
-    {
-        int skorX = 10000;
-        int i, j;
-        for (i = 0; i < papan.ukuran; i++)
-        {
-            for (j = 0; j < papan.ukuran; j++)
-            {
-                if (papan.isi[i][j]=='\000')
-                {
-                    papan.isi[i][j] = papan.pemain[giliranLawan].simbol;
-                    skorX = min(skorX, minimax(!isMax));
-                    papan.isi[i][j] = '\000';
-                }
-            }
-        }
-        return skorX;
-    }
 }
 
 bool isBisaDiisi()
@@ -1199,11 +1284,12 @@ void menuSaveSkor()
     showSkor();
     printf("\nHarap masukkan nama anda untuk melanjutkan");
     printf("\n");
-    pesanInvalid("\nHarap masukkan setidaknya 3 karakter");
+    pesanInvalid("\nNama harus memiliki (3-20) karakter");
     printf("\nMasukkan nama: ");
     fflush(stdin);
-    scanf("%[^\n]s", papan.pemain[0].nama);
-    if (strlen(papan.pemain[0].nama) < 3)
+    fgets(papan.pemain[0].nama, 25, stdin);
+    if (papan.pemain[0].nama[strlen(papan.pemain[0].nama) - 1] == '\n') papan.pemain[0].nama[strlen(papan.pemain[0].nama) - 1] = '\000';
+    if (strlen(papan.pemain[0].nama) < 3 || strlen(papan.pemain[0].nama) >= 25)
     {
         inputValid = false;
         return menuSaveSkor();
@@ -1233,7 +1319,6 @@ void menuKalah(int status)
     printf("\n%s kalah dalam permainan", papan.pemain[0].nama);
     printf("\nSkor: %d", papan.pemain[0].skor);
     printf("\nQ: Ke menu utama | R: Ulangi Permainan");
-    printf("%d", sInfo[9].skor);
     if (skor > sInfo[9].skor) printf(" | S: Simpan Skor");
     printf("\n");
     pesanInvalid("\nPilihan anda tidak valid");
@@ -1324,12 +1409,18 @@ void menuSimpanSiap(int posisi)
     printf("\nBerikut merupakan data permainan yang akan anda simpan");
     printf("\nTingkat Kesulitan : %s", kesulitan);
     printf("\nUkuran Papan      : %d x %d", papan.ukuran, papan.ukuran);
-    printf("\nQ: Kembali");
     if (imporPermainan(posisi, &temp) == 0) printf("\n[Peringatan! Anda akan menimpa data permainan ini]");
     printf("\n");
+    pesanInvalid("\nLabel harus memiliki (3-20) karakter");
     printf("\nMasukkan label penyimpanan: ");
     fflush(stdin);
-    scanf("%[^\n]s", input);
+    fgets(input, 25, stdin);
+    if (input[strlen(input) - 1] == '\n') input[strlen(input) - 1] = '\000';
+    if (strlen(input) < 3 || strlen(input) >= 25)
+    {
+        inputValid = false;
+        menuSimpanSiap(posisi);
+    }
     memset(papan.nama, '\000', sizeof(papan.nama));
     memcpy(papan.nama, input, strlen(input));
 
@@ -1443,7 +1534,7 @@ void bagianCara()
 	while(fgets(fileCara, sizeof(fileCara), in)) printf("%s", &fileCara);
     fclose(in);
     printf("\n");
-    printf("\nTekan tombol apapun untuk kembali ke Menu Utama");
+    printf("\nTekan tombol apapun untuk ke menu utama");
     while (true)
     {
         fflush(stdin);
@@ -1455,6 +1546,7 @@ void bagianCara()
 
 void showSkor()
 {
+    memset(sInfo, 0, sizeof(sInfo));
     int status = imporSkor();
     int i = 0;
     for (i = 0; i < 10; i++)
@@ -1467,60 +1559,36 @@ void showSkor()
 
 void bagianSkor()
 {
+    char input = '\000';
     clearConsole();
     printf("======================================================");
     printf("\nDaftar 10 Pemain dengan Skor Tertinggi");
     printf("\n======================================================");
     printf("\n");
     showSkor();
+    printf("\nQ: Kembali | D: Hapus Skor");
     printf("\n");
-    printf("\nTekan tombol apapun untuk keluar");
-    while (true)
+    pesanInvalid("\nPilihan anda tidak valid");
+    printf("\nMasukkan pilihan: ");
+    getInput(&input);
+    switch (input)
 	{
-        fflush(stdin);
-
-        char input = getch();
-        if((int)input) return menuUtama();
+    case 'Q': return menuUtama();
+    case 'D': return menuHapusSkor();
+    default:
+        inputValid = false;
+        return bagianSkor();
+    break;
 	}
 }
-
-// int imporSkor()
-// {
-//     int i, j;
-//     totalSkor = 0;
-//     char fileSkor[255] = {'\000'};
-//     FILE *in;
-//     memset(sInfo, 0, sizeof(sInfo));
-//     if ((in = fopen(PATH_SKOR, "r")) == NULL)
-//     {
-// 		printf("Error Opening File"); //tutup program karena file ga ada
-// 		fclose(in);
-//         return 1;
-// 	}
-//     while (!feof(in))
-//     {
-// 		fscanf(in, "%[^-]-%[^-]-%d\n", &sInfo[totalSkor].nama, &sInfo[totalSkor].kesulitan, &sInfo[totalSkor].skor);
-//         if (sInfo[totalSkor].nama[strlen(sInfo[totalSkor].nama) - 1] != '\000')
-//         {
-//              sInfo[totalSkor].nama[strlen(sInfo[totalSkor].nama) - 1] = '\000';
-//         }
-//         if (sInfo[totalSkor].kesulitan[strlen(sInfo[totalSkor].kesulitan) - 1] != '\000')
-//         {
-//              sInfo[totalSkor].kesulitan[strlen(sInfo[totalSkor].kesulitan) - 1] = '\000';
-//         }
-// 		totalSkor++;
-// 	}
-//     fclose(in);
-//     return 0;
-// }
 
 int imporSkor()
 {
     int skorSize = sizeof(sInfo);
     char fileData[255] = {'\000'};
     char *fileLokasi = PATH_SKOR;
-    char *dataSkor = malloc(skorSize + 1);
-    memset(dataSkor, 0, skorSize + 1);
+    char *dataSkor = malloc(skorSize);
+    memset(dataSkor, 0, skorSize);
     memcpy(fileData, fileLokasi, strlen(fileLokasi));
     memcpy(fileData + strlen(fileData), ".dat", 4);
     
@@ -1528,6 +1596,7 @@ int imporSkor()
     if (pFile == NULL) return 1;
     if (fread(dataSkor, skorSize, 1, pFile) != 1) return 1;
     memset(&sInfo, 0, sizeof(sInfo));
+    reverse(dataSkor, skorSize);
     memcpy(sInfo, dataSkor, skorSize);
     free(dataSkor);
     fclose(pFile);
@@ -1546,12 +1615,13 @@ int saveSkor()
     int skorSize = sizeof(sInfo);
     char fileData[255] = {'\000'};
     char *fileLokasi = PATH_SKOR;
-    char *dataSkor = malloc(skorSize + 1);
-    memset(dataSkor, 0, skorSize + 1);
+    char *dataSkor = malloc(skorSize);
+    memset(dataSkor, 0, skorSize);
     memcpy(fileData, fileLokasi, strlen(fileLokasi));
     memcpy(fileData + strlen(fileData), ".dat", 4);
     memcpy(dataSkor, sInfo, skorSize);
-    
+    reverse(dataSkor, skorSize);
+
     FILE *pFile = fopen(fileData, "wb");
     if (pFile == NULL) return 1;
     if (fwrite(dataSkor, skorSize, 1, pFile) != 1) return 1;
@@ -1593,41 +1663,36 @@ void sortSkor()
     }
 }
 
-// int saveSkor()
-// {
-//     FILE *in;
-//     int i;
-//     char kesulitan[10] = {'\000'};
-//     char fileSkor[255] = {'\000'};
-//     sortSkor();
-//     memset(&sInfo[9].nama, 0, sizeof(&sInfo[9].nama));
-//     memcpy(&sInfo[9].nama, papan.pemain[0].nama, strlen(papan.pemain[0].nama));
-//     memcpy(&sInfo[9].kesulitan, getKesulitanStr(papan.kesulitan), strlen(getKesulitanStr(papan.kesulitan)));
-//     sInfo[9].skor = papan.pemain[0].skor;
-//     if ((in = fopen(PATH_SKOR, "w")) == NULL)
-//     {
-// 		printf("Error Opening File"); //tutup program karena file ga ada
-// 		fclose(in);
-//         return 1;        
-//     }
-//     for (i = 0; i < 10; i++)
-//     {
-//         if (strlen(sInfo[i].nama) == 0) continue;
-//      
-//         char skor[10] = {'\000'};
-//         itoa(sInfo[i].skor, skor, 10);
-//         memset(fileSkor, 0, sizeof(fileSkor));
-//         memcpy(fileSkor, sInfo[i].nama, strlen(sInfo[i].nama));
-//         memcpy(fileSkor + strlen(fileSkor), " - ", 3);
-//         memcpy(fileSkor + strlen(fileSkor), sInfo[i].kesulitan, strlen(sInfo[i].nama));
-//         memcpy(fileSkor + strlen(fileSkor), " - ", 3);
-//         memcpy(fileSkor + strlen(fileSkor), skor, strlen(skor));
-//         memcpy(fileSkor + strlen(fileSkor), "\n", 1);
-//         fputs(fileSkor, in);
-//     }
-//     fclose(in);
-//     return 0;
-// }
+int deleteSkor()
+{
+    char fileData[255] = {'\000'};
+    char *fileLokasi = PATH_SKOR;
+    memcpy(fileData, fileLokasi, strlen(fileLokasi));
+    memcpy(fileData + strlen(fileData), ".dat", 4);
+    return remove(fileData);
+}
+
+void menuHapusSkor()
+{
+    clearConsole();
+    printf("======================================================");
+    printf("\nDaftar 10 Pemain dengan Skor Tertinggi");
+    printf("\n======================================================");
+    printf("\n");
+    printf("\nApakah anda ingin menghapus semua data skor?");
+    printf("\nTekan 'Enter' untuk setuju atau 'Esc' untuk ke menu utama");
+    while (true)
+    {
+        fflush(stdin);
+        char input = getch();
+        if ((int)input == KEYBOARD_ENTER)
+        {
+            int status = deleteSkor();
+            return menuUtama();
+        }
+        else if ((int)input == KEYBOARD_ESC) return bagianSkor();
+    }
+}
 
 void bagianKeluar()
 {
@@ -1652,12 +1717,12 @@ void bagianKeluar()
 int eval()
 {
     int giliran = papan.giliran;
-    char cek = 'X';
+    char cek = SIMBOL_P1;
     char simbolPemain = papan.pemain[papan.giliran].simbol;
     bool status = cekPapan(cek);
     if (status)
     {
-        cek = 'O';
+        cek = SIMBOL_P2;
         status = cekPapan(cek);
     }
     if (!status)
