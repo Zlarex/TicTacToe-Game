@@ -72,7 +72,6 @@ typedef struct
 	int waktu;
 	int kesulitan;
 	int giliran;
-    int id;
 	bool isBermain;
 	char isi[10][10];
 	Pemain pemain[2];
@@ -94,6 +93,7 @@ pthread_t thTimer, thGame;
 bool inputValid = true;
 bool jeda = false;
 int totalSkor = 0;
+int idPapan = 0; // 0 = papan baru
 Papan papan;
 SkorInfo sInfo[10];
 
@@ -145,10 +145,11 @@ void setPermainan();
 void setPermainanLama();
 void setIsi(int, char);
 void setUkuran();
-int simpanPermainan(int);
+int savePermainan(int);
 void showPermainanLama();
 void showSkor();
 void showPapan(bool);
+void sortSkor();
 void *threadPermainan();
 void *threadTimer();
 void upperCase(char*);
@@ -174,6 +175,7 @@ void initComponent()
     inputValid = true;
     jeda = false;
     totalSkor = 0;
+    idPapan = 0;
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
@@ -216,6 +218,7 @@ char* getKesulitanStr(int kesulitan)
 void menuUtama()
 {
     char input = '\000';
+    idPapan = 0;
     clearConsole();
     printf("======================================================");
     printf("\nMenu Utama");
@@ -278,7 +281,15 @@ void bagianMain()
     case 1: // permainan baru
         setUkuran();
         setModePermainan();
-        if (!papan.pemain[0].isKomputer && papan.pemain[1].isKomputer) setKomputer();
+        if (!papan.pemain[0].isKomputer && papan.pemain[1].isKomputer) 
+        {
+            memset(papan.pemain[0].nama, '\000', sizeof(papan.pemain[0].nama));
+            memset(papan.pemain[1].nama, '\000', sizeof(papan.pemain[1].nama));
+            memcpy(papan.pemain[0].nama, "Anda", 4);
+            memcpy(papan.pemain[1].nama, "Komputer", 9);
+            if (papan.ukuran == 3) setKomputer();
+            else papan.kesulitan = 1;
+        }
         else setMultipemain();
         break;
     case 2: // permainan lama
@@ -384,10 +395,6 @@ void setKomputer()
 	printf("\nMasukan pilihan: ");
     getInput(&input);
     if (input == 'Q') return bagianMain();
-    memset(papan.pemain[0].nama, '\000', sizeof(papan.pemain[0].nama));
-	memset(papan.pemain[1].nama, '\000', sizeof(papan.pemain[1].nama));
-	memcpy(papan.pemain[0].nama, "Anda", 4);
-	memcpy(papan.pemain[1].nama, "Komputer", 9);
 
     int pilihanInt = atoi(&input);
     switch (pilihanInt)
@@ -478,7 +485,11 @@ void setPermainanLama()
     int pilihanInt = atoi(&input);
     if (pilihanInt > 0 && pilihanInt <= 5)
     {
-        if (imporPermainan(pilihanInt, &papan) == 0) return;
+        if (imporPermainan(pilihanInt, &papan) == 0)
+        {
+            idPapan = pilihanInt;
+            return;
+        }
     }
     inputValid = false;
     return setPermainanLama();
@@ -518,7 +529,7 @@ int imporPermainan(int pos, Papan* pPapan)
     return 0;
 }
 
-int simpanPermainan(int pos)
+int savePermainan(int pos)
 {
     int papanSize = sizeof(papan);
     char fileData[255] = {'\000'};
@@ -626,7 +637,11 @@ void mulaiPermainan()
     
     int status;
     if (papan.giliran == 2) status = 2;
-    else if (!cekPapan('X')) status = 0;
+    else if (!cekPapan('X')) 
+    {
+        status = 0;
+        papan.pemain[0].skor += 100;
+    }
     else status = 1;
     menuGameOver(status);
 }
@@ -1141,7 +1156,6 @@ int getTotalKosong()
 void menuMenang(int status)
 {
     char input = '\000';
-    papan.pemain[0].skor += 100;
     printf("\n%s telah memenangkan permainan", papan.pemain[0].nama);
     printf("\nSkor Baru: %d (+100)", papan.pemain[0].skor);
     printf("\nQ: Ke menu utama | R: Lanjutkan Permainan | S: Simpan Permainan");
@@ -1170,20 +1184,40 @@ void menuMenang(int status)
 
 void menuSaveSkor()
 {
+    int skor = papan.pemain[0].skor;
     clearConsole();
     printf("======================================================");
-    printf("\nPermainan %d x %d (%s vs %s)", papan.ukuran, papan.ukuran, papan.pemain[0].nama, papan.pemain[1].nama);
+    printf("\nDaftar 10 Pemain dengan Skor Tertinggi");
     printf("\n======================================================");
     printf("\n");
-    printf("\nSkor anda telah tersimpan");
+    printf("\nSkor anda: %d", papan.pemain[0].skor);
     printf("\n");
     showSkor();
+    printf("Harap masukkan nama anda untuk melanjutkan");
     printf("\n");
-    printf("\nTekan apapun untuk melanjutkan");
-
+    pesanInvalid("Harap masukkan setidaknya 3 karakter");
+    printf("\nMasukkan nama: ");
+    fflush(stdin);
+    scanf("%[^\n]s", papan.pemain[0].nama);
+    if (strlen(papan.pemain[0].nama) < 3)
+    {
+        inputValid = false;
+        return menuSaveSkor();
+    }
+    clearConsole();
+    printf("======================================================");
+    printf("\nDaftar 10 Pemain dengan Skor Tertinggi");
+    printf("\n======================================================");
+    printf("\n");
+    printf("\n");
+    int status = saveSkor();
+    if (status == 0) showSkor();
+    papan.pemain[0].skor = 0;
+    if (idPapan != 0) savePermainan(idPapan);
+    printf("\n");
+    printf("\nTekan tombol apapun untuk melanjutkan");
     while (true)
     {
-        fflush(stdin);
         char c = getch();
         if ((int)c) return menuUtama();
     }
@@ -1196,6 +1230,8 @@ void menuKalah(int status)
     printf("\n%s kalah dalam permainan", papan.pemain[0].nama);
     printf("\nSkor: %d", papan.pemain[0].skor);
     printf("\nQ: Ke menu utama | R: Ulangi Permainan");
+    int i = imporSkor();
+    printf("%d", sInfo[9].skor);
     if (skor > sInfo[9].skor) printf(" | S: Simpan Skor");
     printf("\n");
     pesanInvalid("\nPilihan anda tidak valid");
@@ -1204,25 +1240,16 @@ void menuKalah(int status)
     if (input == 'Q')
     {
         papan.pemain[0].skor = 0;
-        if (papan.id != 0) simpanPermainan(papan.id);
+        if (idPapan != 0) savePermainan(idPapan);
         return menuUtama();
     }
     else if (input == 'R')
     {
         papan.pemain[0].skor = 0;
-        if (papan.id != 0) simpanPermainan(papan.id);
+        if (idPapan != 0) savePermainan(idPapan);
         return setPermainan();
     }
-    else if (skor > sInfo[9].skor && input == 'S')
-    {
-        int status = saveSkor();
-        if (status == 1)
-        {
-            papan.pemain[0].skor = 0;
-            if (papan.id != 0) simpanPermainan(papan.id);
-            return menuSaveSkor();
-        }
-    }
+    else if (skor > sInfo[9].skor && input == 'S') return menuSaveSkor();
     else
     {
         inputValid = false;
@@ -1270,7 +1297,7 @@ void menuSimpan()
     pesanInvalid("\nPilihan anda tidak valid");
     printf("\nMasukkan pilihan: ");
     getInput(&input);
-    if (input == 'Q') menuGameOver(1);
+    if (input == 'Q') menuGameOver(0);
     
     int opsi = atoi(&input);
     if (opsi > 0 && opsi < 4) menuSimpanSiap(opsi);
@@ -1304,7 +1331,7 @@ void menuSimpanSiap(int posisi)
     memset(papan.nama, '\000', sizeof(papan.nama));
     memcpy(papan.nama, input, strlen(input));
 
-    int status = simpanPermainan(posisi);
+    int status = savePermainan(posisi);
     if (status == 0) return menuSimpanSelesai();
 }
 
@@ -1427,6 +1454,7 @@ void bagianCara()
 void showSkor()
 {
     int status = imporSkor();
+    sortSkor();
     if (status == 0)
     {
         int i = 0;
@@ -1516,9 +1544,10 @@ int saveSkor()
     char kesulitan[10] = {'\000'};
     char fileSkor[255] = {'\000'};
     sortSkor();
-    memset(&sInfo[9].nama, 0, strlen(sInfo[9].nama));
+    memset(&sInfo[9].nama, 0, sizeof(&sInfo[9].nama));
     memcpy(&sInfo[9].nama, papan.pemain[0].nama, strlen(papan.pemain[0].nama));
-    memcpy(kesulitan, getKesulitanStr(papan.kesulitan), strlen(getKesulitanStr(papan.kesulitan)));
+    memcpy(&sInfo[9].kesulitan, getKesulitanStr(papan.kesulitan), strlen(getKesulitanStr(papan.kesulitan)));
+    sInfo[9].skor = papan.pemain[0].skor;
     if ((in = fopen(PATH_SKOR, "w")) == NULL)
     {
 		printf("Error Opening File"); //tutup program karena file ga ada
@@ -1537,6 +1566,7 @@ int saveSkor()
         memcpy(fileSkor + strlen(fileSkor), sInfo[i].kesulitan, strlen(sInfo[i].nama));
         memcpy(fileSkor + strlen(fileSkor), " - ", 3);
         memcpy(fileSkor + strlen(fileSkor), skor, strlen(skor));
+        memcpy(fileSkor + strlen(fileSkor), "\n", 1);
         fputs(fileSkor, in);
     }
     fclose(in);
