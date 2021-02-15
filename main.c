@@ -13,11 +13,14 @@
  */
 #include <conio.h>
 #include <ctype.h>
+#include <direct.h>
+#include <errno.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #include <windows.h>
@@ -125,6 +128,7 @@ bool isBisaDiisi();
 int isiAcak();
 int isiKritis();
 void initComponent();
+void initDirectory();
 void jedaPermainan();
 void menuGameOver(int);
 void menuHapusPermainan();
@@ -144,6 +148,8 @@ int parsePosisi();
 void pesanInvalid(char*);
 void reverse(char*, int);
 int saveSkor();
+int savePermainan(int);
+void saveCaraMain(char*);
 void setKomputer();
 void setMultipemain();
 void setModePermainan();
@@ -151,7 +157,6 @@ void setPermainan();
 void setPermainanLama();
 void setIsi(int, char);
 void setUkuran();
-int savePermainan(int);
 void showPermainanLama();
 void showSkor();
 void showPapan(bool);
@@ -186,6 +191,63 @@ void initComponent()
     GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
     SetConsoleTitle("Tic-Tac-Toe Game");
     consoleAttr = consoleInfo.wAttributes;
+    initDirectory();
+}
+
+void initDirectory()
+{
+    char cwd[1000] = {'\000'};    
+    errno = 0;
+    if (getcwd(cwd, sizeof(cwd)) != NULL)
+    {
+        saveCaraMain(cwd);
+        memcpy(cwd + strlen(cwd), "\\game", 5);
+        int status = mkdir(cwd);
+        if (status == 0) saveCaraMain(cwd);
+        else if (status == -1 && errno != EEXIST)
+        {
+            printf("Harap untuk membuat folder 'game' terlebih dahulu");
+            printf("\nError Code: %d", errno);
+            system("pause");
+        }
+    }
+}
+
+void saveCaraMain(char *path)
+{
+    int lenPathCara = strlen(path) + 20;
+    char *pathCara = malloc(lenPathCara);
+    memset(pathCara, 0, lenPathCara);
+    memcpy(pathCara + strlen(pathCara), "CaraBermain.txt", strlen("CaraBermain.txt"));
+    FILE *in = fopen(pathCara, "r");
+    if (in) return;
+    else
+    {
+        fclose(in);
+        in = fopen(pathCara, "w");
+        fprintf(in, "======================================================");
+        fprintf(in, "\nCara Bermain");
+        fprintf(in, "\n======================================================");
+        fprintf(in, "\n");
+        fprintf(in, "\n[1.] Pilih \"Mulai Permainan\" pada Menu Utama");
+        fprintf(in, "\n[2.] Pilih \"Permainan Baru\" atau \"Lanjutkan\""); 
+        fprintf(in, "\n[3.] Pilih Ukuran Papan Permainan (Apabila memilih \"Permainan Baru\");");
+        fprintf(in, "\n[4.] Pilih Mode Permainan");
+        fprintf(in, "\nKeterangan:");
+        fprintf(in, "\n  a. Tingkat Kesulitan Komputer yaitu mudah, sedang, dan sulit");
+        fprintf(in, "\n  b. Masukan nama user jika memilih Multipemain");
+        fprintf(in, "\n[5.] Masukkan angka pada petak yang masih kosong");
+        fprintf(in, "\n[6.] User diberi batasan waktu dalam menentukan selama 10 detik");
+        fprintf(in, "\n[7.] Permainan Berakhir");
+        fprintf(in, "\nKeterangan:");
+        fprintf(in, "\n  a. 3 petak terisi untuk 3x3 (horizontal, vertikal, diagonal)");
+        fprintf(in, "\n  b. 4 petak terisi untuk 4x4 (horizontal, vertikal, diagonal)"); 
+        fprintf(in, "\n  c. 5 petak terisi untuk 7x7 (horizontal, vertikal, diagonal)");
+        fprintf(in, "\n[8.] Skor permainan dapat disimpan dan permainan bisa dilanjut di lain waktu");
+        fprintf(in, "\n[9.] Pemain bisa memilih \"Ulang Permainan\" atau \"Keluar\" pada akhir permainan");
+        fprintf(in, "\n[10.] Pemain bisa memilih tingkat kesulitan yang baru pada menu utama");
+        fclose(in);
+    }
 }
 
 void clearConsole()
@@ -547,9 +609,9 @@ void showPermainanLama()
     for (i = 0; i < 5; i++)
     {
         Papan temp;
-        printf("\n%d. ", i + 1);
-        if (imporPermainan(i + 1, &temp) == 0) printf("%s", temp.nama);
-        else printf("[ Kosong ]");
+        printf("\n[%d.] ", i + 1);
+        if (imporPermainan(i + 1, &temp) == 0) printf("%-8.25s | %d x %d | Skor: %d", temp.nama, temp.ukuran, temp.ukuran, temp.pemain[0].skor);
+        else printf("%-8.25s | %-5.4s | -", "Kosong", "-");
     }
 }
 
@@ -1438,7 +1500,7 @@ void menuSimpanSelesai()
     printf("\nSimpan Permainan");
     printf("\n======================================================");
     printf("\n");
-    printf("\nBerikut merupakan data permainan yang telah disimpan");
+    printf("\nData permainan ini telah disimpan");
     printf("\nLabel Papan       : %s", papan.nama);
     printf("\nTingkat Kesulitan : %s", kesulitan);
     printf("\nUkuran Papan      : %d x %d", papan.kesulitan, papan.kesulitan);
@@ -1552,8 +1614,8 @@ void showSkor()
     for (i = 0; i < 10; i++)
     {
         printf("\n[%d.] ", i + 1);
-        if (strlen(sInfo[i].nama) == 0) printf("%-15.25s\t | %-5.10s | %s", "Kosong", "-", "-");
-        else printf("%-15.25s\t | %-5.10s | %d", sInfo[i].nama, sInfo[i].kesulitan, sInfo[i].skor);
+        if (strlen(sInfo[i].nama) == 0) printf("%-8.25s\t | %-5.10s | %s", "Kosong", "-", "-");
+        else printf("%-8.25s\t | %-5.10s | %d", sInfo[i].nama, sInfo[i].kesulitan, sInfo[i].skor);
     }
 }
 
