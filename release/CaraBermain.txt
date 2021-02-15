@@ -1,0 +1,21 @@
+======================================================
+Cara Bermain
+======================================================
+
+[1.] Pilih "Mulai Permainan" pada Menu Utama
+[2.] Pilih "Permainan Baru" atau "Lanjutkan"
+[3.] Pilih Ukuran Papan Permainan (Apabila memilih "Permainan Baru");
+[4.] Pilih Mode Permainan
+Keterangan:
+  a. Tingkat Kesulitan Komputer yaitu mudah, sedang, dan sulit
+  b. Masukan nama user jika memilih Multipemain
+[5.] Masukkan angka pada petak yang masih kosong
+[6.] User diberi batasan waktu dalam menentukan selama 10 detik
+[7.] Permainan Berakhir
+Keterangan:
+  a. 3 petak terisi untuk 3x3 (horizontal, vertikal, diagonal)
+  b. 4 petak terisi untuk 4x4 (horizontal, vertikal, diagonal)
+  c. 5 petak terisi untuk 7x7 (horizontal, vertikal, diagonal)
+[8.] Skor permainan dapat disimpan dan permainan bisa dilanjut di lain waktu
+[9.] Pemain bisa memilih "Ulang Permainan" atau "Keluar" pada akhir permainan
+[10.] Pemain bisa memilih tingkat kesulitan yang baru pada menu utama

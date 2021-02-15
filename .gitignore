@@ -1,7 +1,5 @@
 # File specifies intentionally untracked files that Git should ignore
-*.exe
 *.o
-*.txt
 .vscode
 .DS_Store
 debug/

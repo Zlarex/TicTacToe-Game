@@ -28,7 +28,7 @@
 /**
  * Makro
  */
-#define DEBUG
+//#define DEBUG
 #define GAME_TIMER 10
 #define KEYBOARD_ENTER 13
 #define KEYBOARD_ESC 27
@@ -37,14 +37,14 @@
 #define START_MINIMAX_5x5 22
 #define START_MINIMAX_7x7 46
 
-#ifdef DEBUG
+#ifdef DEBUG // DEBUG VERSION
     #define PATH_CARA "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/CaraBermain.txt"
     #define PATH_SKOR "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/skor"
     #define PATH_GAME "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save"
-#else
+#else // RELEASE VERSION
     #define PATH_GAME "/game/save"
     #define PATH_CARA "CaraBermain.txt"
-    #define PATH_SKOR "Skor.txt"
+    #define PATH_SKOR "/skor"
 #endif
 
 /**
