@@ -43,9 +43,9 @@
     #define PATH_SKOR "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/skor"
     #define PATH_GAME "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save"
 #else // RELEASE VERSION
-    #define PATH_GAME "/game/save"
+    #define PATH_GAME "game/save"
     #define PATH_CARA "CaraBermain.txt"
-    #define PATH_SKOR "/skor"
+    #define PATH_SKOR "skor"
 #endif
 
 /**
