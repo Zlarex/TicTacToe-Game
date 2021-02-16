@@ -43,9 +43,9 @@
     #define PATH_SKOR "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/skor"
     #define PATH_GAME "D:/Arsip Kuliah/Coding/TicTacToe-Game/debug/game/save"
 #else // RELEASE VERSION
-    #define PATH_GAME "/game/save"
+    #define PATH_GAME "game/save"
     #define PATH_CARA "CaraBermain.txt"
-    #define PATH_SKOR "/skor"
+    #define PATH_SKOR "skor"
 #endif
 
 /**
@@ -1144,12 +1144,12 @@ int getJangkauan(int kesulitan, int ukuran)
     {
     case 2: // sedang
         if (ukuran == 3) return 2;
-        if (ukuran == 5) return 3;
-        if (ukuran == 7) return 4;
+        if (ukuran == 5) return 2;
+        if (ukuran == 7) return 2;
     case 3: // sulit
         if (ukuran == 3) return 4;
-        if (ukuran == 5) return 5;
-        if (ukuran == 7) return 6;
+        if (ukuran == 5) return 4;
+        if (ukuran == 7) return 3;
     default: return 0;
     }
 }
