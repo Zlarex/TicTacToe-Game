@@ -207,7 +207,7 @@ void initDirectory()
         if (status == -1 && errno != EEXIST)
         {
             printf("Harap untuk membuat folder 'game' terlebih dahulu");
-            printf("\nError Code: %d", errno);
+            printf("\nError Code: %d\n", errno);
             system("pause");
         }
     }
