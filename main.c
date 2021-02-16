@@ -32,6 +32,7 @@
 #define GAME_TIMER 10
 #define KEYBOARD_ENTER 13
 #define KEYBOARD_ESC 27
+#define MAX_SAVEGAME 5
 #define SIMBOL_P1 'X'
 #define SIMBOL_P2 'O'
 #define START_MINIMAX_5x5 22
@@ -203,8 +204,7 @@ void initDirectory()
         saveCaraMain(cwd);
         memcpy(cwd + strlen(cwd), "\\game", 5);
         int status = mkdir(cwd);
-        if (status == 0) saveCaraMain(cwd);
-        else if (status == -1 && errno != EEXIST)
+        if (status == -1 && errno != EEXIST)
         {
             printf("Harap untuk membuat folder 'game' terlebih dahulu");
             printf("\nError Code: %d", errno);
@@ -220,7 +220,11 @@ void saveCaraMain(char *path)
     memset(pathCara, 0, lenPathCara);
     memcpy(pathCara + strlen(pathCara), "CaraBermain.txt", strlen("CaraBermain.txt"));
     FILE *in = fopen(pathCara, "r");
-    if (in) return;
+    if (in)
+    {
+        fclose(in);
+        return;
+    }
     else
     {
         fclose(in);
@@ -591,7 +595,7 @@ void setPermainanLama()
     else if (input == 'D') return menuHapusPermainan();
     
     int pilihanInt = atoi(&input);
-    if (pilihanInt > 0 && pilihanInt <= 5)
+    if (pilihanInt > 0 && pilihanInt <= MAX_SAVEGAME)
     {
         if (imporPermainan(pilihanInt, &papan) == 0)
         {
@@ -606,7 +610,7 @@ void setPermainanLama()
 void showPermainanLama()
 {
     int i = 0;
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < MAX_SAVEGAME; i++)
     {
         Papan temp;
         printf("\n[%d.] ", i + 1);
@@ -1449,7 +1453,7 @@ void menuSimpan()
     if (input == 'Q') menuGameOver(0);
     
     int opsi = atoi(&input);
-    if (opsi > 0 && opsi < 4) menuSimpanSiap(opsi);
+    if (opsi > 0 && opsi <= MAX_SAVEGAME) menuSimpanSiap(opsi);
     else
     {
         inputValid = false;
