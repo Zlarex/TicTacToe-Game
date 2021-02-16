@@ -144,8 +144,8 @@ void menuSimpanSelesai();
 void menuUtama();
 int minimax(bool, int, int, int, int);
 void mulaiPermainan();
-int panjangAngka();
-int parsePosisi();
+int panjangAngka(int);
+int parsePosisi(int, int);
 void pesanInvalid(char*);
 void reverse(char*, int);
 int saveSkor();
@@ -1287,9 +1287,10 @@ bool isBisaDiisi()
 int parsePosisi(int x, int y)
 {
     int hasil = 0;
-    for (int i = 0; i < papan.ukuran; i++)
+    int i, j;
+    for (i = 0; i < papan.ukuran; i++)
     {
-        for (int j = 0; j < papan.ukuran; j++)
+        for (j = 0; j < papan.ukuran; j++)
         {
             if (i == x && j == y) return hasil + 1;
             hasil++;
